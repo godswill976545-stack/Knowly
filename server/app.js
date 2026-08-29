@@ -130,41 +130,181 @@ Respond with ONLY a JSON object, no markdown fences, no reasoning text before or
 Aim for thoroughness - the user explicitly wants longer, detailed answers. Do not be brief.`
 }
 
-function parseModelJson(text) {
-  const cleaned = text
+function stripFences(text) {
+  return text
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim()
+}
+
+function extractBalancedJson(text) {
+  const cleaned = stripFences(text)
+  const start = cleaned.indexOf('{')
+  if (start === -1) return null
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (ch === '\\') escaped = true
+      else if (ch === '"') inString = false
+    } else {
+      if (ch === '"') inString = true
+      else if (ch === '{') depth++
+      else if (ch === '}') {
+        depth--
+        if (depth === 0) return cleaned.slice(start, i + 1)
+      }
+    }
+  }
+  // Truncated — return from start to end for repair attempt
+  return cleaned.slice(start)
+}
+
+function repairJson(str) {
+  let s = str.trim()
+  // Remove trailing commas before } or ]
+  s = s.replace(/,\s*([}\]])/g, '$1')
+  // Close unclosed strings (rare): if odd quotes, append
+  // Auto-close missing braces/brackets
+  let openBraces = 0
+  let openBrackets = 0
+  let inStr = false
+  let esc = false
+  for (const ch of s) {
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === '\\') esc = true
+      else if (ch === '"') inStr = false
+    } else {
+      if (ch === '"') inStr = true
+      else if (ch === '{') openBraces++
+      else if (ch === '}') openBraces--
+      else if (ch === '[') openBrackets++
+      else if (ch === ']') openBrackets--
+    }
+  }
+  if (inStr) s += '"'
+  while (openBrackets > 0) { s += ']'; openBrackets-- }
+  while (openBraces > 0) { s += '}'; openBraces-- }
+  // Fix unterminated last string value: ensure last quote closed already handled
+  return s
+}
+
+function fallbackExtract(text) {
+  const getField = (name) => {
+    const re = new RegExp(`"${name}"\\s*:\\s*"((?:\\\\"|[^"])*)"`, 's')
+    const m = text.match(re)
+    if (m) return m[1].replace(/\\"/g, '"').replace(/\\n/g, '\n')
+    // Try single-quoted or unquoted extraction as last resort
+    const re2 = new RegExp(`${name}\\s*:\\s*"([^"]+)"`, 'i')
+    const m2 = text.match(re2)
+    return m2 ? m2[1] : null
+  }
+  const checksRe = /"checks"\s*:\s*\[([\s\S]*?)\]/
+  const checksMatch = text.match(checksRe)
+  let checks = []
+  if (checksMatch) {
+    const inner = checksMatch[1]
+    const items = [...inner.matchAll(/"((?:\\"|[^"])*)"/g)].map((m) => m[1].replace(/\\"/g, '"'))
+    if (items.length) checks = items
+  }
+  const simple = getField('simple_terms')
+  const why = getField('why_it_matters')
+  if (!simple && !why) return null
+  return {
+    simple_terms: simple || text.slice(0, 500).replace(/^\W+/, '').trim(),
+    why_it_matters: why || '',
+    checks: checks.length ? checks : ['Vérifiez la date limite', 'Vérifiez le montant ou la condition', 'Vérifiez l\'autorité émettrice'],
+    sources: [],
+    disclaimer: 'Ceci est une explication, pas un avis juridique. Vérifiez les décisions importantes auprès de l\'autorité compétente.',
+  }
+}
+
+function parseModelJson(text) {
+  const raw = text.trim()
+  if (!raw) throw new Error('Empty model response')
+  const candidate = extractBalancedJson(raw)
+  if (!candidate) throw new Error('No JSON object in model response')
+  const attempts = []
+  attempts.push(candidate)
+  attempts.push(repairJson(candidate))
+  // Also try full cleaned text slice
+  const cleaned = stripFences(raw)
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
-  if (start === -1 || end === -1) throw new Error('No JSON object in model response')
-  return JSON.parse(cleaned.slice(start, end + 1))
+  if (start !== -1 && end !== -1 && end > start) {
+    const slice = cleaned.slice(start, end + 1)
+    if (!attempts.includes(slice)) attempts.push(slice)
+    const repairedSlice = repairJson(slice)
+    if (!attempts.includes(repairedSlice)) attempts.push(repairedSlice)
+  }
+  let lastErr = null
+  for (const attempt of attempts) {
+    try {
+      const normalized = attempt.replace(/,\s*([}\]])/g, '$1')
+      return JSON.parse(normalized)
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  // Regex fallback — salvage what we can
+  const salvaged = fallbackExtract(raw)
+  if (salvaged) return salvaged
+  throw new Error(`JSON parse failed: ${lastErr?.message || 'unknown'} | preview: ${raw.slice(0, 250).replace(/\n/g, ' ')}`)
 }
 
 async function callZen(message, systemPrompt) {
+  const payload = {
+    model: ZEN_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `${message}\n\n/no_think` },
+    ],
+    temperature: 0.3,
+    max_tokens: 1800,
+    chat_template_kwargs: { thinking: false },
+  }
+  // Ask for JSON object mode if provider supports it (ignored if not)
+  try {
+    payload.response_format = { type: 'json_object' }
+  } catch {}
   const res = await fetch(`${ZEN_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.OPENCODE_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: ZEN_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `${message}\n\n/no_think` },
-      ],
-      temperature: 0.35,
-      max_tokens: 1400,
-      chat_template_kwargs: { thinking: false },
-    }),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(`Zen API error ${res.status}: ${body.slice(0, 300)}`)
+    // Retry once without response_format if provider rejects it
+    if (body.includes('response_format') || body.includes('json_object')) {
+      delete payload.response_format
+      const retry = await fetch(`${ZEN_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENCODE_API_KEY}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      if (!retry.ok) {
+        const retryBody = await retry.text()
+        throw new Error(`Zen API error ${retry.status}: ${retryBody.slice(0, 400)}`)
+      }
+      const retryData = await retry.json()
+      return retryData.choices?.[0]?.message?.content ?? ''
+    }
+    throw new Error(`Zen API error ${res.status}: ${body.slice(0, 400)}`)
   }
   const data = await res.json()
-  return data.choices?.[0]?.message?.content ?? ''
+  const content = data.choices?.[0]?.message?.content ?? ''
+  if (!content.trim()) throw new Error('Empty response from AI provider')
+  return content
 }
 
 const FALLBACK_EXPLANATION = {
@@ -285,21 +425,50 @@ app.post('/explain', async (c) => {
       const lawRows = await retrieveLawContext(message)
       const hasLaws = lawRows.length > 0
       const raw = await callZen(message, buildSystemPrompt(buildLawBlock(lawRows), hasLaws))
-      const parsed = parseModelJson(raw)
+      let parsed
+      try {
+        parsed = parseModelJson(raw)
+      } catch (parseErr) {
+        console.error('JSON parse failed, raw preview:', raw.slice(0, 600), 'err:', parseErr.message)
+        // Try to salvage raw text into a graceful response instead of 502
+        const salvaged = fallbackExtract(raw)
+        if (salvaged) {
+          parsed = salvaged
+          console.warn('Salvaged response via fallbackExtract')
+        } else {
+          // Last resort: use raw as simple_terms
+          parsed = {
+            simple_terms: raw.slice(0, 1200).replace(/^```[a-z]*\n?/i, '').replace(/```$/i, '').trim() || 'Le service a répondu mais le format était inattendu. Voici le texte brut : ' + raw.slice(0, 800),
+            why_it_matters: 'Vérifiez les informations avec la source officielle.',
+            checks: ['Vérifiez la source citée', 'Vérifiez la date d’effet', 'Consultez l’autorité compétente si nécessaire'],
+            sources: [],
+            disclaimer: 'Ceci est une explication, pas un avis juridique. Vérifiez les décisions importantes auprès de l’autorité compétente.',
+          }
+        }
+      }
       explanation = {
-        simple_terms: String(parsed.simple_terms ?? ''),
-        why_it_matters: String(parsed.why_it_matters ?? ''),
-        checks: Array.isArray(parsed.checks) ? parsed.checks.map(String) : [],
-        sources: Array.isArray(parsed.sources) ? parsed.sources : [],
+        simple_terms: String(parsed.simple_terms ?? '').slice(0, 3000) || 'Explication indisponible — réessayez.',
+        why_it_matters: String(parsed.why_it_matters ?? '').slice(0, 2000),
+        checks: Array.isArray(parsed.checks) ? parsed.checks.map(String).slice(0, 8) : [],
+        sources: Array.isArray(parsed.sources) ? parsed.sources.slice(0, 10) : [],
         disclaimer:
           String(
             parsed.disclaimer ??
-              'This is an explanation, not legal advice. Verify important decisions with an appropriate professional or official authority.'
+              'Ceci est une explication, pas un avis juridique. Vérifiez les décisions importantes auprès de l’autorité compétente.'
           ),
+      }
+      if (!explanation.simple_terms || explanation.simple_terms.length < 10) {
+        throw new Error('Model returned empty explanation')
       }
     } catch (err) {
       console.error('Zen call failed:', err.message)
-      return c.json({ error: `AI provider failed: ${err.message}` }, 502)
+      // User-friendly message, keep 502 but with clear remediation
+      const friendly = err.message.includes('JSON') || err.message.includes('Empty response')
+        ? 'Le service IA a répondu dans un format inattendu. Réessayez dans un instant.'
+        : err.message.includes('Zen API error')
+          ? 'Le service IA est temporairement indisponible. Réessayez dans quelques secondes.'
+          : err.message
+      return c.json({ error: friendly, _debug: err.message.slice(0, 300) }, 502)
     }
   }
 
@@ -461,16 +630,30 @@ app.post('/explain/upload', async (c) => {
     const lawRows = await retrieveLawContext(combined)
     const hasLaws = lawRows.length > 0
     const raw = await callZen(combined, buildSystemPrompt(buildLawBlock(lawRows), hasLaws))
-    const parsed = parseModelJson(raw)
+    let parsed
+    try {
+      parsed = parseModelJson(raw)
+    } catch (pe) {
+      const salvaged = fallbackExtract(raw)
+      if (salvaged) parsed = salvaged
+      else parsed = {
+        simple_terms: raw.slice(0, 1200).replace(/^```[a-z]*\n?/i, '').replace(/```$/i, '').trim() || 'Le document a été lu mais la réponse était mal formatée.',
+        why_it_matters: 'Vérifiez les informations avec la source officielle.',
+        checks: ['Vérifiez la date limite', 'Vérifiez le montant', 'Vérifiez l’autorité émettrice'],
+        sources: [],
+        disclaimer: 'Ceci est une explication, pas un avis juridique. Vérifiez les décisions importantes auprès de l’autorité compétente.',
+      }
+    }
     explanation = {
-      simple_terms: String(parsed.simple_terms ?? ''),
-      why_it_matters: String(parsed.why_it_matters ?? ''),
-      checks: Array.isArray(parsed.checks) ? parsed.checks.map(String) : [],
-      sources: Array.isArray(parsed.sources) ? parsed.sources : [],
-      disclaimer: String(parsed.disclaimer ?? 'This is an explanation, not legal advice. Verify important decisions with an appropriate professional or official authority.'),
+      simple_terms: String(parsed.simple_terms ?? '').slice(0, 3000),
+      why_it_matters: String(parsed.why_it_matters ?? '').slice(0, 2000),
+      checks: Array.isArray(parsed.checks) ? parsed.checks.map(String).slice(0, 8) : [],
+      sources: Array.isArray(parsed.sources) ? parsed.sources.slice(0, 10) : [],
+      disclaimer: String(parsed.disclaimer ?? 'Ceci est une explication, pas un avis juridique. Vérifiez les décisions importantes auprès de l’autorité compétente.'),
     }
   } catch (err) {
-    return c.json({ error: `AI provider failed: ${err.message}` }, 502)
+    const friendly = err.message.includes('JSON') ? 'Le service IA a répondu dans un format inattendu. Réessayez.' : err.message
+    return c.json({ error: friendly }, 502)
   }
 
   const encoder = new TextEncoder()

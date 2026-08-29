@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion, useMotionValue, useSpring, useTransform } from 'motion/react'
+import { useRef, useState } from 'react'
 
 const Icon = ({ name, className = '', fill = false }) => (
   <span className={`material-symbols-outlined ${fill ? 'ms-fill' : ''} ${className}`}>{name}</span>
@@ -27,7 +28,7 @@ function LandingNav({ onSignIn }) {
         {clerkActive ? (
           <a
             href="#/sign-in"
-            className="rounded-full bg-primary px-5 py-2.5 text-label-md font-semibold text-white transition hover:bg-[#1e2a4a] active:scale-[0.98]"
+            className="btn-duo btn-duo--dark px-5 py-2.5 text-label-md"
           >
             Ouvrir Knowly
           </a>
@@ -35,7 +36,7 @@ function LandingNav({ onSignIn }) {
           <a
             href="#/sign-in"
             onClick={(e) => { e.preventDefault(); onSignIn?.() }}
-            className="rounded-full bg-primary px-5 py-2.5 text-label-md font-semibold text-white transition hover:bg-[#1e2a4a] active:scale-[0.98]"
+            className="btn-duo btn-duo--dark px-5 py-2.5 text-label-md"
           >
             Ouvrir Knowly
           </a>
@@ -45,102 +46,232 @@ function LandingNav({ onSignIn }) {
   )
 }
 
+function FloatingOrb({ delay = 0, size = 80, color = 'rgba(88,204,2,0.15)', top = '10%', left = '20%' }) {
+  return (
+    <motion.div
+      initial={{ y: 0 }}
+      animate={{ y: [-8, 8, -8] }}
+      transition={{ duration: 4 + delay, repeat: Infinity, ease: 'easeInOut', delay }}
+      className="pointer-events-none absolute rounded-full blur-2xl"
+      style={{ width: size, height: size, background: color, top, left }}
+    />
+  )
+}
+
+function IsometricStack() {
+  return (
+    <div className="relative h-32 w-32 select-none" style={{ transform: 'rotateX(12deg) rotateY(-12deg)' }}>
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1cb0f6] to-[#0e7490] shadow-[0_12px_32px_rgba(28,176,246,0.35)]" style={{ transform: 'translateZ(0px)' }} />
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#58cc02] to-[#2d6a00] opacity-90" style={{ transform: 'translateZ(12px) translateX(6px) translateY(-6px)' }} />
+      <div className="absolute inset-0 rounded-2xl bg-white shadow-xl flex items-center justify-center" style={{ transform: 'translateZ(24px) translateX(12px) translateY(-12px)' }}>
+        <Icon name="gavel" className="text-[36px] text-primary" />
+      </div>
+      <div className="absolute -bottom-1 left-4 right-4 h-3 rounded-full bg-black/10 blur-md" />
+    </div>
+  )
+}
+
 function Hero({ onSignIn }) {
   const reduce = useReducedMotion()
+  const ref = useRef(null)
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  const rotateX = useSpring(useTransform(mouseY, [-300, 300], [6, -6]), { stiffness: 80, damping: 20 })
+  const rotateY = useSpring(useTransform(mouseX, [-300, 300], [-8, 8]), { stiffness: 80, damping: 20 })
+  const [isHovering, setIsHovering] = useState(false)
+
+  const handleMouseMove = (e) => {
+    if (reduce) return
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    mouseX.set(e.clientX - cx)
+    mouseY.set(e.clientY - cy)
+  }
+  const handleLeave = () => {
+    mouseX.set(0)
+    mouseY.set(0)
+    setIsHovering(false)
+  }
+
   return (
-    <section className="mx-auto grid max-w-[1280px] grid-cols-1 gap-8 px-4 py-10 md:grid-cols-2 md:gap-10 md:px-10 md:py-14 lg:py-16">
-      <div className="flex flex-col justify-center">
-        <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5">
-          <span className="h-2 w-2 rounded-full bg-secondary" />
-          <span className="text-caption font-medium text-on-surface-variant">Sources officielles vérifiées — mis à jour quotidiennement</span>
+    <section className="relative overflow-hidden">
+      {/* warm mesh behind hero */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#fdfcf8] via-[#f8f9ff] to-white" />
+      <div className="pointer-events-none absolute -top-24 right-[-10%] h-[520px] w-[680px] rounded-full bg-gradient-to-br from-[#dcfce7]/60 via-[#e0f2fe]/50 to-[#fef9c3]/40 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 left-[-5%] h-[420px] w-[560px] rounded-full bg-gradient-to-tr from-[#1cb0f6]/10 to-[#58cc02]/10 blur-3xl" />
+
+      <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-8 px-4 py-10 md:grid-cols-2 md:gap-10 md:px-10 md:py-14 lg:py-16">
+        <div className="flex flex-col justify-center">
+          <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 shadow-sm">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+            <span className="text-caption font-semibold tracking-wide text-emerald-800">Sources officielles vérifiées — mis à jour quotidiennement</span>
+          </div>
+          <motion.h1
+            initial={reduce ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-[14ch] text-[32px] font-bold leading-[0.95] tracking-[-0.02em] text-on-surface md:text-[44px] lg:text-[52px]"
+          >
+            Vos droits, <span className="relative inline-block text-emerald-600 italic">clairs.<span className="absolute bottom-1 left-0 h-2 w-full -z-10 bg-[#ffc800]/30 -rotate-1" /></span> Votre argent, en ordre.
+          </motion.h1>
+          <motion.p
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-4 max-w-[42ch] text-body-md leading-relaxed text-on-surface-variant"
+          >
+            Comprenez les lois béninoises et gérez votre budget — expliqués simplement, à partir de sources officielles.
+          </motion.p>
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-7 flex flex-wrap items-center gap-3"
+          >
+            <a href="#/sign-in" className="btn-duo btn-duo--primary px-7 py-3.5 text-[15px]">
+              Commencer — c'est gratuit <Icon name="arrow_forward" className="text-[18px]" />
+            </a>
+            <a href="#features" className="btn-duo btn-duo--white px-5 py-3 text-label-md">
+              Voir comment ça marche
+            </a>
+          </motion.div>
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-caption text-on-surface-variant">
+            <span className="flex items-center gap-1.5"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Icon name="verified" className="text-[14px]" /></span> Sans jargon</span>
+            <span className="h-3 w-px bg-outline-variant" />
+            <span className="flex items-center gap-1.5"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700"><Icon name="lock" className="text-[14px]" /></span> Données chiffrées</span>
+            <span className="h-3 w-px bg-outline-variant" />
+            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold tracking-wide text-on-surface shadow-sm border border-outline-variant">4 langues · FR · EN · Yorùbá · Fon</span>
+          </div>
         </div>
-        <motion.h1
-          initial={reduce ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-[14ch] text-[32px] font-bold leading-[0.95] tracking-[-0.02em] text-on-surface md:text-[44px] lg:text-[48px]"
+
+        <div
+          ref={ref}
+          onMouseMove={handleMouseMove}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={handleLeave}
+          className="relative perspective-1000"
         >
-          Vos droits, <span className="text-secondary italic">clairs.</span> Votre argent, en ordre.
-        </motion.h1>
-        <motion.p
-          initial={reduce ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-4 max-w-[42ch] text-body-md leading-relaxed text-on-surface-variant"
-        >
-          Comprenez les lois béninoises et gérez votre budget — expliqués simplement, à partir de sources officielles.
-        </motion.p>
-        <motion.div
-          initial={reduce ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-7 flex flex-wrap items-center gap-3"
-        >
-          <a href="#/sign-in" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-label-md font-semibold text-white transition hover:bg-[#1e2a4a] active:translate-y-px">
-            Commencer — c'est gratuit <Icon name="arrow_forward" className="text-[18px]" />
-          </a>
-          <a href="#features" className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-5 py-3 text-label-md font-medium text-on-surface hover:bg-surface-container-low">
-            Voir comment ça marche
-          </a>
-        </motion.div>
-        <div className="mt-6 flex items-center gap-3 text-caption text-on-surface-variant">
-          <span className="flex items-center gap-1"><Icon name="verified" className="text-[14px] text-secondary" /> Sans jargon</span>
-          <span className="h-3 w-px bg-outline-variant" />
-          <span className="flex items-center gap-1"><Icon name="lock" className="text-[14px]" /> Données chiffrées</span>
-          <span className="h-3 w-px bg-outline-variant" />
-          <span>4 langues · FR · EN · Yorùbá · Fon</span>
+          {/* floating orbs behind */}
+          <FloatingOrb size={220} color="rgba(88,204,2,0.10)" top="0%" left="10%" delay={0} />
+          <FloatingOrb size={180} color="rgba(28,176,246,0.12)" top="20%" left="55%" delay={0.6} />
+          <FloatingOrb size={140} color="rgba(255,200,0,0.14)" top="55%" left="5%" delay={1.2} />
+
+          {/* 3D premade-feel element cluster - top right floating stack */}
+          <motion.div
+            animate={reduce ? {} : { y: [0, -10, 0], rotate: [ -1, 1, -1] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -top-6 right-6 z-20 hidden md:flex perspective-1000"
+          >
+            <div className="preserve-3d">
+              <IsometricStack />
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.6, type: 'spring', stiffness: 200 }}
+                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#ffc800] text-on-surface shadow-[0_4px_0_#e5b500] border-2 border-white"
+              >
+                <Icon name="star" fill className="text-[14px]" />
+              </motion.div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            style={reduce ? {} : { rotateX, rotateY }}
+            onHoverStart={() => setIsHovering(true)}
+            className="relative preserve-3d will-change-transform"
+          >
+            <div
+              className={`relative overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12),0_8px_24px_rgba(15,23,42,0.08)] transition-all duration-300 ${isHovering ? 'shadow-[0_32px_96px_rgba(15,23,42,0.16)]' : ''}`}
+              style={{ transform: 'translateZ(0)' }}
+            >
+              <div className="flex items-center justify-between border-b border-outline-variant/40 bg-gradient-to-r from-surface-container-low to-white px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57] shadow-[0_1px_2px_rgba(0,0,0,0.15)]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e] shadow-[0_1px_2px_rgba(0,0,0,0.15)]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] shadow-[0_1px_2px_rgba(0,0,0,0.15)]" />
+                </div>
+                <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-caption font-semibold tracking-wide text-on-surface-variant shadow-sm border border-outline-variant/60">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> knowly.bj — Aperçu LIVE
+                </span>
+                <Icon name="more_horiz" className="text-outline" />
+              </div>
+              <div className="grid grid-cols-5 gap-0">
+                <div className="col-span-2 border-r border-outline-variant/40 bg-gradient-to-b from-surface-container-low to-[#f8fafc] p-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2.5 text-white shadow-[0_4px_0_#065f46]"><Icon name="home" className="text-[16px]" /><span className="text-caption font-bold">Accueil</span></div>
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-on-surface-variant shadow-sm border border-outline-variant/40"><Icon name="notifications" className="text-[16px] text-orange-500" /><span className="text-caption font-medium">Alertes</span><span className="ml-auto rounded-full bg-[#ff4b4b] px-2 py-0.5 text-[10px] font-black text-white shadow-[0_2px_0_#e04343]">3</span></div>
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-on-surface-variant shadow-sm border border-outline-variant/40"><Icon name="payments" className="text-[16px] text-sky-500" /><span className="text-caption font-medium">Argent</span></div>
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-on-surface-variant shadow-sm border border-outline-variant/40"><Icon name="smart_toy" className="text-[16px] text-violet-500" /><span className="text-caption font-medium">Assistant IA</span></div>
+                  </div>
+                  <div className="mt-6 rounded-2xl bg-white p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] border border-outline-variant/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-caption font-bold tracking-wide text-on-surface">Votre épargne</span>
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">+12%</span>
+                    </div>
+                    <div className="mt-1 flex items-baseline gap-1 text-[22px] font-black tracking-tight text-on-surface">248 000 <span className="text-caption font-medium text-on-surface-variant">CFA</span></div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-container shadow-inner"><div className="h-full w-[62%] rounded-full bg-gradient-to-r from-[#58cc02] to-[#46a302]" /></div>
+                    <div className="mt-1.5 flex justify-between text-[11px] font-medium text-on-surface-variant"><span>62% · Ordinateur portable</span><span className="text-emerald-600">Objectif</span></div>
+                  </div>
+                </div>
+                <div className="col-span-3 bg-white p-4">
+                  <div className="rounded-2xl border-l-[4px] border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 shadow-sm">
+                    <div className="mb-2 flex items-center gap-2"><span className="rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-[0_2px_0_#065f46]">Fonction publique</span><span className="ml-auto flex items-center gap-1 text-caption font-bold text-emerald-700"><Icon name="verified" fill className="text-[12px]" /> Officiel</span></div>
+                    <div className="text-label-md font-bold leading-tight text-on-surface">Avancement au 12e échelon — conditions remplies ?</div>
+                    <p className="mt-1.5 text-caption leading-relaxed text-on-surface-variant">Le Conseil a autorisé l'avancement des 1 110 agents au 11e échelon. Vérifiez ancienneté et mérite.</p>
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-caption font-bold text-emerald-700 shadow-sm border border-emerald-200">Comprendre en 30s <Icon name="arrow_forward" className="text-[14px]" /></div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 rounded-2xl border border-outline-variant/40 bg-gradient-to-r from-white to-surface-container-low p-3 shadow-sm">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-[0_3px_0_#4c1d95]"><Icon name="smart_toy" className="text-[16px]" /></div>
+                    <div className="flex-1"><div className="text-caption font-bold text-on-surface">Expliquez-moi tout ✨</div><div className="text-caption text-on-surface-variant">Collez un avis d'impôt, un bail...</div></div>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-sm"><Icon name="send" className="text-[14px]" /></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* floating chunky badges with 3D lift */}
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              style={{ transform: 'translateZ(30px)' }}
+              className="absolute -bottom-5 -right-3 hidden rounded-2xl border border-emerald-200 bg-white p-3 shadow-[0_12px_32px_rgba(0,0,0,0.10),0_4px_0_#a7f3d0] md:flex md:items-center md:gap-3"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_3px_0_#065f46]"><Icon name="trending_up" className="text-[18px]" /></div>
+              <div><div className="text-label-md font-black text-on-surface">+ 50 000 CFA / mois</div><div className="text-caption font-medium text-on-surface-variant">Capacité d'épargne estimée</div></div>
+            </motion.div>
+
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+              style={{ transform: 'translateZ(40px)' }}
+              className="absolute -left-4 top-12 hidden rounded-2xl border border-sky-200 bg-white px-3 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.08),0_4px_0_#bae6fd] md:flex items-center gap-2.5"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500 text-white shadow-[0_2px_0_#0369a1]"><Icon name="shield" className="text-[16px]" /></div>
+              <div><div className="text-caption font-black text-on-surface leading-none">100% vérifié</div><div className="text-[11px] font-medium text-on-surface-variant">Source gouv.bj</div></div>
+            </motion.div>
+
+            <motion.div
+              animate={reduce ? {} : { y: [0, -6, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ transform: 'translateZ(20px)' }}
+              className="absolute -left-2 bottom-20 hidden h-3 w-3 rounded-full bg-[#ffc800] shadow-[0_3px_0_#e5b500] md:block"
+            />
+            <motion.div
+              animate={reduce ? {} : { y: [0, 8, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+              style={{ transform: 'translateZ(15px)' }}
+              className="absolute right-10 top-8 hidden h-2 w-2 rounded-full bg-[#1cb0f6] shadow-[0_2px_0_#1493cf] md:block"
+            />
+          </motion.div>
+
+          {/* bottom glow */}
+          <div className="pointer-events-none absolute -bottom-6 left-6 right-6 h-8 rounded-full bg-black/[0.06] blur-xl" />
         </div>
       </div>
-
-      <motion.div
-        initial={reduce ? false : { opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-        className="relative"
-      >
-        <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-          <div className="flex items-center justify-between border-b border-outline-variant/60 bg-surface-container-low px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-error/70" /><span className="h-2.5 w-2.5 rounded-full bg-yellow-400" /><span className="h-2.5 w-2.5 rounded-full bg-secondary/70" />
-            </div>
-            <span className="text-caption font-medium text-on-surface-variant">knowly.bj — Aperçu</span>
-            <Icon name="more_horiz" className="text-outline" />
-          </div>
-          <div className="grid grid-cols-5 gap-0">
-            <div className="col-span-2 border-r border-outline-variant/60 bg-surface-container-low p-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-lg bg-secondary-container px-3 py-2 text-on-secondary-container"><Icon name="home" className="text-[16px]" /><span className="text-caption font-semibold">Accueil</span></div>
-                <div className="flex items-center gap-2 px-3 py-2 text-on-surface-variant"><Icon name="notifications" className="text-[16px]" /><span className="text-caption">Alertes</span><span className="ml-auto rounded-full bg-error px-2 py-0.5 text-[10px] font-bold text-white">3</span></div>
-                <div className="flex items-center gap-2 px-3 py-2 text-on-surface-variant"><Icon name="payments" className="text-[16px]" /><span className="text-caption">Argent</span></div>
-                <div className="flex items-center gap-2 px-3 py-2 text-on-surface-variant"><Icon name="smart_toy" className="text-[16px]" /><span className="text-caption">Assistant IA</span></div>
-              </div>
-              <div className="mt-6 rounded-xl bg-white p-3 shadow-sm">
-                <div className="text-caption font-semibold text-on-surface">Votre épargne</div>
-                <div className="mt-1 text-headline-md font-bold text-on-surface">248 000 <span className="text-caption font-normal text-on-surface-variant">CFA</span></div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full w-[62%] rounded-full bg-primary" /></div>
-                <div className="mt-1 text-caption text-on-surface-variant">62% · Ordinateur portable</div>
-              </div>
-            </div>
-            <div className="col-span-3 p-4">
-              <div className="rounded-xl border-l-4 border-l-secondary bg-surface-container-low p-4">
-                <div className="mb-2 flex items-center gap-2"><span className="rounded-full bg-secondary-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-secondary-container">Fonction publique</span><span className="ml-auto flex items-center gap-1 text-caption text-secondary"><Icon name="verified" className="text-[12px]" /> Officiel</span></div>
-                <div className="text-label-md font-semibold leading-tight text-on-surface">Avancement au 12e échelon — conditions remplies ?</div>
-                <p className="mt-1.5 text-caption leading-relaxed text-on-surface-variant">Le Conseil a autorisé l'avancement des 1 110 agents au 11e échelon. Vérifiez ancienneté et mérite.</p>
-                <div className="mt-3 inline-flex items-center gap-1 text-caption font-medium text-primary">Comprendre en 30s <Icon name="arrow_forward" className="text-[14px]" /></div>
-              </div>
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-outline-variant bg-white p-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white"><Icon name="smart_toy" className="text-[16px]" /></div>
-                <div className="flex-1"><div className="text-caption font-medium text-on-surface">Expliquez-moi tout</div><div className="text-caption text-on-surface-variant">Collez un avis d'impôt, un bail...</div></div>
-                <Icon name="send" className="text-on-surface-variant" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="absolute -bottom-4 -right-2 hidden rounded-xl border border-outline-variant bg-white p-3 shadow-lg md:flex md:items-center md:gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container"><Icon name="trending_up" className="text-[18px]" /></div>
-          <div><div className="text-label-md font-semibold text-on-surface">+ 50 000 CFA / mois</div><div className="text-caption text-on-surface-variant">Capacité d'épargne estimée</div></div>
-        </div>
-      </motion.div>
     </section>
   )
 }
@@ -170,7 +301,7 @@ function BentoFeatures() {
         <p className="mt-3 max-w-[52ch] text-body-md leading-relaxed text-on-surface-variant">Pas de jargon. Pas de bluff. Juste ce que dit la loi, ce que ça change pour vous, et quoi vérifier ensuite.</p>
       </div>
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-12">
-        <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-primary p-6 text-white md:col-span-7 md:p-8">
+        <div className="home-hero-card relative overflow-hidden rounded-[24px] border border-white/10 p-6 text-white md:col-span-7 md:p-8 shadow-xl">
           <div className="relative z-10 max-w-[42ch]">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-caption font-medium"><Icon name="gavel" className="text-[14px]" /> Droit & réglementation</div>
             <h3 className="text-[22px] font-semibold leading-tight md:text-[24px]">Chaque changement, sourcé.</h3>
@@ -183,7 +314,7 @@ function BentoFeatures() {
           <div className="pointer-events-none absolute -bottom-8 -right-8 h-48 w-48 rounded-full bg-white/5" />
           <div className="pointer-events-none absolute -top-10 -right-10 h-64 w-64 rounded-full border border-white/10" />
         </div>
-        <div className="flex flex-col justify-between rounded-2xl border border-outline-variant bg-secondary-container p-6 md:col-span-5">
+        <div className="flex flex-col justify-between rounded-[24px] border border-secondary/15 bg-gradient-to-br from-[#d1fae5] to-[#a7f3d0] p-6 md:col-span-5 shadow-sm">
           <div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-on-secondary-container shadow-sm"><Icon name="savings" /></div>
             <h3 className="mt-4 text-headline-md text-on-secondary-container">Votre argent, clair.</h3>
@@ -276,7 +407,7 @@ function FinalCTA({ onSignIn }) {
         <h2 className="mx-auto max-w-[18ch] text-[30px] font-bold leading-none tracking-[-0.02em] text-on-surface md:text-[40px]">Prêt à y voir clair ?</h2>
         <p className="mx-auto mt-3 max-w-[48ch] text-body-md text-on-surface-variant">Rejoignez Knowly. Vos alertes, votre budget et vos explications — au même endroit.</p>
         <div className="mt-6 flex justify-center">
-          <a href="#/sign-in" className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-label-md font-semibold text-white shadow-sm hover:bg-[#1e2a4a] active:scale-[0.98]">
+          <a href="#/sign-in" className="btn-duo btn-duo--primary px-7 py-3.5 text-label-md shadow-sm">
             Créer mon compte <Icon name="arrow_forward" className="text-[18px]" />
           </a>
         </div>

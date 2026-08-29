@@ -315,7 +315,7 @@ function AuthContent({
         <div className="flex items-center justify-between">
           <button
             onClick={() => (window.location.hash = '')}
-            className="group inline-flex items-center gap-2 rounded-full border border-outline-variant bg-white px-4 py-2 text-label-md font-medium text-on-surface transition hover:bg-surface-container-low active:scale-[0.98]"
+            className="btn-duo btn-duo--white group px-4 py-2 text-label-md"
           >
             <Icon name="arrow_back" className="text-[16px] transition-transform group-hover:-translate-x-0.5" />
             <span>Retour à l'accueil</span>
@@ -323,7 +323,7 @@ function AuthContent({
 
           <button
             onClick={handleDemoAccess}
-            className="inline-flex items-center gap-1.5 rounded-full bg-secondary-container px-3.5 py-1.5 text-caption font-semibold text-on-secondary-container transition hover:opacity-90 active:scale-[0.98]"
+            className="btn-duo btn-duo--mint px-3.5 py-1.5 text-caption"
           >
             <Icon name="bolt" className="text-[16px] text-secondary" /> Mode Démo Direct
           </button>
@@ -428,7 +428,7 @@ function AuthContent({
               <button
                 type="submit"
                 disabled={loading || verificationCode.length < 6}
-                className="w-full flex items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-label-md font-semibold text-white shadow-md transition hover:bg-[#1e2a4a] disabled:opacity-50 active:scale-[0.98]"
+                className="btn-duo btn-duo--primary w-full justify-center py-3.5 text-label-md shadow-md disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -459,7 +459,7 @@ function AuthContent({
                   type="button"
                   onClick={() => handleOAuth('oauth_google')}
                   disabled={loading}
-                  className="flex items-center justify-center gap-2.5 rounded-full border border-outline-variant bg-white px-4 py-3 text-label-md font-semibold text-on-surface shadow-sm transition hover:bg-surface-container-low hover:border-outline active:scale-[0.98]"
+                  className="btn-duo btn-duo--white flex flex-1 items-center justify-center gap-2 py-3 text-label-md"
                 >
                   <GoogleIcon className="h-4 w-4" />
                   <span>Google</span>
@@ -469,7 +469,7 @@ function AuthContent({
                   type="button"
                   onClick={() => handleOAuth('oauth_apple')}
                   disabled={loading}
-                  className="flex items-center justify-center gap-2.5 rounded-full border border-outline-variant bg-white px-4 py-3 text-label-md font-semibold text-on-surface shadow-sm transition hover:bg-surface-container-low hover:border-outline active:scale-[0.98]"
+                  className="btn-duo btn-duo--white flex flex-1 items-center justify-center gap-2 py-3 text-label-md"
                 >
                   <AppleIcon className="h-4 w-4" />
                   <span>Apple</span>
@@ -605,7 +605,7 @@ function AuthContent({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-label-md font-semibold text-white shadow-md transition hover:bg-[#1e2a4a] active:scale-[0.98] disabled:opacity-50"
+                  className="btn-duo btn-duo--primary mt-2 w-full justify-center py-3.5 text-label-md shadow-md disabled:opacity-50"
                 >
                   {loading ? (
                     <>

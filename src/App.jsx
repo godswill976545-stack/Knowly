@@ -51,7 +51,7 @@ function UserBadge({ guestMode, onExitGuest }) {
         <button
           onClick={onExitGuest}
           title="Quitter le mode démo"
-          className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant hover:text-error transition"
+          className="btn-duo btn-duo--white flex h-7 w-7 items-center justify-center !p-0 text-on-surface-variant"
         >
           <Icon name="logout" className="text-[16px]" />
         </button>
@@ -87,7 +87,7 @@ function TopBarUser({ guestMode, onExitGuest }) {
       <button
         onClick={onExitGuest}
         title="Quitter le mode démo"
-        className="flex items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1 text-caption font-medium text-on-surface hover:bg-error-container hover:text-on-error-container transition"
+        className="btn-duo btn-duo--white flex items-center gap-1.5 px-3 py-1 text-caption"
       >
         <span className="h-2 w-2 rounded-full bg-secondary" />
         <span>Démo</span>
@@ -142,7 +142,7 @@ function ErrorBanner({ message, onRetry, t }) {
       </div>
       <button
         onClick={onRetry}
-        className="rounded-full bg-primary px-4 py-2 text-label-md font-medium text-white transition hover:bg-[#1e2a4a] active:scale-[0.98]"
+        className="btn-duo btn-duo--dark px-5 py-2.5 text-label-md"
       >
         {t('error.retry')}
       </button>
@@ -206,7 +206,7 @@ function AlertCard({ alert, onExplain, onView, t }) {
       </dl>
       <button
         onClick={(e) => { e.stopPropagation(); onExplain(alert) }}
-        className="mt-4 inline-flex items-center gap-1.5 text-label-md font-medium text-primary hover:underline"
+        className="btn-duo btn-duo--white mt-4 px-4 py-2 text-[13px] font-bold text-primary border-primary/10"
       >
         {t('alerts.cta')} <Icon name="arrow_forward" className="text-[16px]" />
       </button>
@@ -217,7 +217,7 @@ function AlertCard({ alert, onExplain, onView, t }) {
 function AlertDetail({ alert, onBack, onAsk, t }) {
   return (
     <div className="space-y-6">
-      <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-4 py-2 text-label-md text-on-surface hover:bg-surface-container-low">
+      <button onClick={onBack} className="btn-duo btn-duo--white px-4 py-2 text-[13px]">
         <Icon name="arrow_back" className="text-[16px]" /> Retour
       </button>
       <article className="rounded-2xl border border-outline-variant bg-white p-6 ambient-shadow md:p-8">
@@ -263,7 +263,7 @@ function AlertDetail({ alert, onBack, onAsk, t }) {
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             onClick={() => onAsk(alert)}
-            className="inline-flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-label-md font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+            className="btn-duo btn-duo--secondary px-5 py-2.5 text-label-md"
           >
             Demander à l'IA <Icon name="smart_toy" className="text-[18px]" />
           </button>
@@ -272,7 +272,7 @@ function AlertDetail({ alert, onBack, onAsk, t }) {
               href={alert.source_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-5 py-2.5 text-label-md font-medium text-on-surface hover:bg-surface-container-low"
+              className="btn-duo btn-duo--white px-5 py-2.5 text-label-md"
             >
               Source originale <Icon name="open_in_new" className="text-[16px]" />
             </a>
@@ -311,7 +311,7 @@ function Home({ data, loading, error, goAi, onViewArticle, t }) {
           {loading || !topAlert ? <SkeletonCard /> : <AlertCard alert={topAlert} onExplain={goAi} onView={onViewArticle} t={t} />}
 
           <section className="relative grid grid-cols-1 gap-6 md:grid-cols-9 md:gap-8">
-            <div className="relative overflow-hidden rounded-[20px] border border-outline-variant bg-primary p-6 md:col-span-5 md:p-8">
+            <div className="home-hero-card relative overflow-hidden rounded-[28px] border border-white/10 p-6 md:col-span-5 md:p-8 shadow-[0_20px_60px_rgba(19,27,46,0.3)]">
               <div className="relative z-10 max-w-[54ch]">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-caption font-medium"><Icon name="smart_toy" className="text-[14px]" /> Assistant IA officiel</div>
                 <h2 className="max-w-[18ch] text-[22px] font-semibold leading-tight text-white md:text-[24px]">{t('home.aiTitle')}</h2>
@@ -324,7 +324,7 @@ function Home({ data, loading, error, goAi, onViewArticle, t }) {
                   />
                   <button
                     type="submit"
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary px-5 py-3 text-label-md font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+                    className="btn-duo btn-duo--secondary shrink-0 px-5 py-3 text-label-md"
                   >
                     {t('common.ask')} <Icon name="send" className="text-[16px]" />
                   </button>
@@ -572,7 +572,7 @@ function Money({ data, loading, error, reload, t }) {
                 <button
                   onClick={saveGoal}
                   disabled={savingGoal}
-                  className="whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-label-md font-medium text-white transition hover:bg-[#1e2a4a] disabled:opacity-50 active:scale-[0.98]"
+                  className="btn-duo btn-duo--primary whitespace-nowrap px-5 py-2.5 text-label-md disabled:opacity-50"
                 >
                   {savingGoal ? t('money.saving') : t('money.updateGoal')}
                 </button>
@@ -586,7 +586,7 @@ function Money({ data, loading, error, reload, t }) {
           )}
         </div>
 
-        <div className="flex flex-col justify-center rounded-2xl bg-secondary-container p-6 text-on-secondary-container">
+        <div className="flex flex-col justify-center rounded-[20px] border border-secondary/10 bg-gradient-to-br from-[#d1fae5] to-[#a7f3d0] p-6 text-on-secondary-container shadow-sm">
           <div className="mb-2 flex items-center gap-2">
             <Icon name="lightbulb" fill />
             <h3 className="text-body-lg font-semibold">{t('money.planTitle')}</h3>
@@ -598,7 +598,7 @@ function Money({ data, loading, error, reload, t }) {
           ) : (
             <p className="mb-4 text-[22px] font-semibold leading-tight">{t('money.planDone')}</p>
           )}
-          <button className="w-fit rounded-full bg-white px-5 py-2.5 text-label-md font-semibold text-on-secondary-container shadow-sm transition hover:bg-white/90 active:scale-[0.98]">
+          <button className="btn-duo btn-duo--white w-fit px-5 py-2.5 text-label-md">
             {t('money.autoSave')}
           </button>
         </div>
@@ -607,7 +607,7 @@ function Money({ data, loading, error, reload, t }) {
       <section>
         <div className="mb-4 flex items-end justify-between">
           <h2 className="text-[20px] font-semibold tracking-tight text-on-surface">{t('money.library')}</h2>
-          <button className="text-label-md font-medium text-primary hover:underline">{t('money.viewAll')}</button>
+          <button className="btn-duo btn-duo--ghost px-4 py-1.5 text-label-md">{t('money.viewAll')}</button>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {LIBRARY.map((item) => (
@@ -641,7 +641,7 @@ function Money({ data, loading, error, reload, t }) {
               <p className="text-body-md text-white/70">{t('money.coachSubtitle')}</p>
             </div>
           </div>
-          <button className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-white px-6 py-3 text-label-md font-semibold text-primary transition hover:bg-surface-container-low md:w-auto active:scale-[0.98]">
+          <button className="btn-duo btn-duo--white w-full md:w-auto px-6 py-3 text-label-md">
             {t('money.coachCta')} <Icon name="arrow_forward" className="text-[18px]" />
           </button>
         </div>
@@ -657,30 +657,41 @@ function AskAI({ t, pendingExplain, clearPending }) {
   const [loading, setLoading] = useState(false)
   const [typing, setTyping] = useState(false)
   const [error, setError] = useState(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [fileName, setFileName] = useState(null)
+  const [fileObj, setFileObj] = useState(null)
   const suggestions = ['ai.suggestion1', 'ai.suggestion2', 'ai.suggestion3']
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+  const mapError = (msg) => {
+    if (!msg) return 'Une erreur est survenue. Réessayez.'
+    if (msg.includes('JSON') || msg.includes('json') || msg.includes('Unexpected token')) return 'Le service IA a répondu dans un format inattendu. Réessayez dans un instant.'
+    if (msg.includes('502') || msg.includes('AI provider')) return 'Le service IA est temporairement indisponible. Réessayez dans quelques secondes.'
+    if (msg.includes('Network') || msg.includes('fetch')) return 'Problème de connexion. Vérifiez votre internet et réessayez.'
+    return msg
+  }
 
   const typeOut = async (full) => {
     setDisplayed({ simple_terms: '', why_it_matters: '', checks: [] })
     setTyping(true)
     let cur = ''
-    for (const w of full.simple_terms.split(/(\s+)/)) {
+    for (const w of (full.simple_terms || '').split(/(\s+)/)) {
       if (!w) continue
       cur += w
       const snap = cur
       setDisplayed((d) => ({ ...d, simple_terms: snap }))
-      await sleep(22)
+      await sleep(18)
     }
     cur = ''
-    for (const w of full.why_it_matters.split(/(\s+)/)) {
+    for (const w of (full.why_it_matters || '').split(/(\s+)/)) {
       if (!w) continue
       cur += w
       const snap = cur
       setDisplayed((d) => ({ ...d, why_it_matters: snap }))
-      await sleep(22)
+      await sleep(18)
     }
-    for (const chk of full.checks) {
+    for (const chk of (full.checks || [])) {
       let chkCur = ''
       setDisplayed((d) => ({ ...d, checks: [...d.checks, ''] }))
       for (const w of chk.split(/(\s+)/)) {
@@ -692,9 +703,9 @@ function AskAI({ t, pendingExplain, clearPending }) {
           copy[copy.length - 1] = snap
           return { ...d, checks: copy }
         })
-        await sleep(22)
+        await sleep(18)
       }
-      await sleep(70)
+      await sleep(60)
     }
     setTyping(false)
   }
@@ -710,15 +721,90 @@ function AskAI({ t, pendingExplain, clearPending }) {
       setLoading(false)
       await typeOut(data)
     } catch (err) {
-      setError(err.message)
+      setError(mapError(err.message))
       setLoading(false)
+    }
+  }
+
+  const runUpload = async (file, msg) => {
+    setLoading(true)
+    setTyping(true)
+    setError(null)
+    setAnswer(null)
+    setDisplayed({ simple_terms: '', why_it_matters: '', checks: [] })
+    let acc = { simple_terms: '', why_it_matters: '', checks: [] }
+    let currentSection = 'simple_terms'
+    let checksBuffer = ''
+    try {
+      await api.explainUploadStream(file, msg || question, {
+        onToken: ({ token, section }) => {
+          if (section && section !== currentSection) {
+            // flush previous
+            if (currentSection === 'checks' && checksBuffer) {
+              acc.checks.push(checksBuffer.trim())
+              checksBuffer = ''
+            }
+            currentSection = section
+          }
+          if (section === 'checks') {
+            if (token === '\n') {
+              if (checksBuffer.trim()) {
+                acc.checks.push(checksBuffer.trim())
+                checksBuffer = ''
+              }
+              setDisplayed({ simple_terms: acc.simple_terms, why_it_matters: acc.why_it_matters, checks: [...acc.checks] })
+            } else {
+              checksBuffer += token
+              // show buffer as last check preview
+              const preview = [...acc.checks, checksBuffer]
+              setDisplayed({ simple_terms: acc.simple_terms, why_it_matters: acc.why_it_matters, checks: preview })
+            }
+          } else if (section === 'simple_terms') {
+            acc.simple_terms += token
+            setDisplayed({ ...acc, checks: [...acc.checks] })
+          } else if (section === 'why_it_matters') {
+            acc.why_it_matters += token
+            setDisplayed({ ...acc, checks: [...acc.checks] })
+          }
+        },
+        onDone: (data) => {
+          if (checksBuffer.trim() && !acc.checks.includes(checksBuffer.trim())) {
+            acc.checks.push(checksBuffer.trim())
+            setDisplayed({ simple_terms: acc.simple_terms, why_it_matters: acc.why_it_matters, checks: [...acc.checks] })
+          }
+          setAnswer({ sources: data.sources || [], disclaimer: data.disclaimer || '', stub: data.stub })
+          setLoading(false)
+          setTyping(false)
+        },
+        onError: (msg) => {
+          setError(mapError(msg))
+          setLoading(false)
+          setTyping(false)
+        },
+      })
+    } catch (err) {
+      setError(mapError(err.message))
+      setLoading(false)
+      setTyping(false)
     }
   }
 
   const submit = async (e) => {
     e.preventDefault()
+    if (fileObj) {
+      await runUpload(fileObj, question)
+      return
+    }
     if (!question.trim()) return
     await runExplain(question)
+  }
+
+  const handleFile = (f) => {
+    if (!f) return
+    if (f.size > 10 * 1024 * 1024) { setError('Fichier trop volumineux (max 10 Mo)'); return }
+    setFileObj(f)
+    setFileName(f.name)
+    setError(null)
   }
 
   useEffect(() => {
@@ -736,42 +822,76 @@ function AskAI({ t, pendingExplain, clearPending }) {
         <p className="mt-2 max-w-[60ch] text-body-md leading-relaxed text-on-surface-variant">{t('ai.subtitle')}</p>
       </div>
 
-      <section className="rounded-2xl border border-outline-variant bg-white p-6 ambient-shadow">
+      <section className="rounded-[20px] border border-outline-variant bg-white p-6 ambient-shadow">
         <form onSubmit={submit}>
           <label htmlFor="ai-query" className="mb-2 block text-label-md font-semibold text-on-surface">
             {t('ai.yourDoc')}
           </label>
           <textarea
             id="ai-query"
-            rows={5}
+            rows={4}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder={t('ai.placeholder')}
             className="w-full resize-y rounded-2xl border border-outline-variant bg-white px-4 py-3 text-body-md leading-relaxed text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
           />
+          {/* Duolingo-style file drop — premade 3D-feel card */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); const f=e.dataTransfer.files?.[0]; if(f) handleFile(f)}}
+            className={`mt-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed p-3 transition ${dragOver ? 'border-emerald-400 bg-emerald-50' : 'border-outline-variant bg-surface-container-low/60'} ${fileName ? 'border-emerald-300 bg-emerald-50' : ''}`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-[0_3px_0_rgba(0,0,0,0.08)] ${fileName ? 'bg-emerald-500 text-white' : 'bg-white text-on-surface-variant border border-outline-variant'}`}>
+                <Icon name={fileName ? 'description' : 'upload_file'} className="text-[20px]" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-label-md font-semibold text-on-surface truncate">{fileName ? fileName : 'Glissez un PDF, image ou scan ici'}</div>
+                <div className="text-caption text-on-surface-variant">{fileName ? 'Prêt à analyser — ajoutez une question si besoin' : 'PDF, JPG, PNG · max 10 Mo · OCR automatique'}</div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {fileName && (
+                <button type="button" onClick={() => { setFileObj(null); setFileName(null)}} className="btn-duo btn-duo--white px-3 py-1.5 text-caption">Retirer</button>
+              )}
+              <label className="btn-duo btn-duo--white px-4 py-2 text-caption cursor-pointer">
+                <Icon name="folder_open" className="text-[16px]" /> Choisir
+                <input type="file" accept=".pdf,image/*,.txt,.docx" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+              </label>
+            </div>
+          </div>
+
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               type="submit"
-              disabled={loading || !question.trim()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-5 py-2.5 text-label-md font-semibold text-white transition hover:opacity-90 disabled:opacity-50 active:scale-[0.98]"
+              disabled={loading || (!question.trim() && !fileObj)}
+              className="btn-duo btn-duo--secondary px-6 py-3 text-label-md disabled:opacity-50"
             >
-              {loading ? t('ai.thinking') : t('ai.explain')} <Icon name="send" className="text-[16px]" />
+              {loading ? (
+                <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> {t('ai.thinking')}</>
+              ) : fileObj ? (
+                <><Icon name="auto_awesome" className="text-[16px]" /> Analyser le document</>
+              ) : (
+                <><Icon name="send" className="text-[16px]" /> {t('ai.explain')}</>
+              )}
             </button>
             {suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setQuestion(t(s))}
-                className="rounded-full border border-outline-variant bg-white px-4 py-2 text-caption font-medium text-on-surface-variant transition hover:bg-surface-container-low"
+                className="btn-duo btn-duo--ghost px-3.5 py-2 text-caption"
               >
                 {t(s)}
               </button>
             ))}
           </div>
+          {fileName && <p className="mt-2 text-caption text-emerald-700 font-medium flex items-center gap-1.5"><Icon name="check_circle" className="text-[14px]" /> Document chargé — il sera analysé avec votre question.</p>}
         </form>
       </section>
 
-      {error && <ErrorBanner message={error} onRetry={() => setError(null)} t={t} />}
+      {error && <ErrorBanner message={error} onRetry={() => { if (fileObj) runUpload(fileObj, question); else if (question.trim()) runExplain(question); else setError(null)}} t={t} />}
 
       {(loading || typing || displayed.simple_terms) && (
         <section className="rounded-2xl border border-outline-variant bg-white p-6 ambient-shadow">
@@ -926,10 +1046,10 @@ function Profile({ data, loading, error, reload, t, lang, setLang }) {
                   key={topic}
                   onClick={() => toggle(topic)}
                   aria-pressed={active}
-                  className={`rounded-full border px-4 py-2 text-label-md transition ${
+                  className={`btn-duo px-4 py-2 text-label-md ${
                     active
-                      ? 'border-secondary bg-secondary-container font-semibold text-on-secondary-container'
-                      : 'border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-low'
+                      ? 'btn-duo--mint !border-secondary font-bold'
+                      : 'btn-duo--white text-on-surface-variant'
                   }`}
                 >
                   {topic}
@@ -944,7 +1064,7 @@ function Profile({ data, loading, error, reload, t, lang, setLang }) {
         <button
           onClick={save}
           disabled={saving || interests === null}
-          className="rounded-full bg-primary px-6 py-2.5 text-label-md font-semibold text-white transition hover:bg-[#1e2a4a] disabled:opacity-50 active:scale-[0.98]"
+          className="btn-duo btn-duo--primary px-6 py-2.5 text-label-md disabled:opacity-50"
         >
           {saving ? t('profile.saving') : t('profile.save')}
         </button>

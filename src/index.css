@@ -4,10 +4,16 @@
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #f8f9ff;
-  color: #0b1c30;
+  background-color: #fdfcf8;
+  color: #0f1e33;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Warm colour grading – subtle mesh to lift the cold #f8f9ff */
+  background-image:
+    radial-gradient(1200px 600px at 10% -10%, rgba(88, 204, 2, 0.06), transparent 60%),
+    radial-gradient(900px 500px at 95% 10%, rgba(28, 176, 246, 0.07), transparent 60%),
+    radial-gradient(800px 600px at 50% 120%, rgba(255, 200, 0, 0.05), transparent 60%);
+  background-attachment: fixed;
 }
 
 .material-symbols-outlined {
@@ -29,3 +35,126 @@ body {
   outline: 2px solid #131b2e;
   outline-offset: 2px;
 }
+
+/* ========== Duolingo-style chunky 3D buttons ========== */
+@layer components {
+  .btn-duo {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full font-bold tracking-tight select-none;
+    position: relative;
+    border: 2px solid transparent;
+    border-bottom-width: 4px;
+    transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.08s ease, border-bottom-width 0.08s ease;
+    transform: translateY(0);
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-duo:active {
+    transform: translateY(4px);
+    border-bottom-width: 2px;
+    filter: brightness(0.98);
+  }
+  .btn-duo:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(0.2);
+  }
+
+  .btn-duo--primary {
+    background: #58cc02;
+    color: white;
+    border-color: #46a302;
+    border-bottom-color: #46a302;
+    box-shadow: 0 4px 0 #46a302;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.12);
+  }
+  .btn-duo--primary:hover { filter: brightness(1.05); }
+  .btn-duo--primary:active { box-shadow: 0 0 0 #46a302; }
+
+  .btn-duo--secondary {
+    background: #1cb0f6;
+    color: white;
+    border-color: #1493cf;
+    border-bottom-color: #1493cf;
+    box-shadow: 0 4px 0 #1493cf;
+  }
+  .btn-duo--secondary:hover { filter: brightness(1.05); }
+  .btn-duo--secondary:active { box-shadow: 0 0 0 #1493cf; }
+
+  .btn-duo--dark {
+    background: #131b2e;
+    color: white;
+    border-color: #0f1524;
+    border-bottom-color: #0a0f1c;
+    box-shadow: 0 4px 0 #0a0f1c;
+  }
+  .btn-duo--dark:hover { background: #1e2e4a; }
+  .btn-duo--dark:active { box-shadow: 0 0 0 #0a0f1c; }
+
+  .btn-duo--yellow {
+    background: #ffc800;
+    color: #0f1e33;
+    border-color: #e5b500;
+    border-bottom-color: #e5b500;
+    box-shadow: 0 4px 0 #e5b500;
+  }
+  .btn-duo--yellow:active { box-shadow: 0 0 0 #e5b500; }
+
+  .btn-duo--white {
+    background: white;
+    color: #0f1e33;
+    border-color: #d8dee8;
+    border-bottom-color: #b8c0cf;
+    box-shadow: 0 4px 0 #d8dee8;
+  }
+  .btn-duo--white:hover { background: #f8fafc; }
+  .btn-duo--white:active { box-shadow: 0 0 0 #d8dee8; }
+
+  .btn-duo--ghost {
+    background: white;
+    color: #0f1e33;
+    border-color: #e2e8f0;
+    border-bottom-color: #cbd5e1;
+    box-shadow: 0 3px 0 #e2e8f0;
+  }
+  .btn-duo--ghost:active { box-shadow: 0 0 0 #e2e8f0; }
+
+  .btn-duo--mint {
+    background: #d1fae5;
+    color: #065f46;
+    border-color: #a7f3d0;
+    border-bottom-color: #6ee7b7;
+    box-shadow: 0 4px 0 #6ee7b7;
+  }
+
+  /* subtle press scale for icons inside */
+  .btn-duo:active .material-symbols-outlined {
+    transform: translateY(0.5px);
+  }
+}
+
+/* Home colour grading helpers */
+.home-hero-card {
+  background: linear-gradient(135deg, #131b2e 0%, #1e3a5f 55%, #1e2e4a 100%);
+  position: relative;
+  overflow: hidden;
+}
+.home-hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(600px 400px at 20% 0%, rgba(88,204,2,0.10), transparent 60%),
+    radial-gradient(500px 500px at 90% 100%, rgba(28,176,246,0.10), transparent 60%);
+  pointer-events: none;
+}
+
+/* 3D tilt helpers */
+.perspective-1000 { perspective: 1000px; }
+.preserve-3d { transform-style: preserve-3d; }
+
+/* Scrollbar hide for mobile nav */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Improve text rendering on gradient cards */
+.text-balance { text-wrap: balance; }
