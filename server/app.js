@@ -6,6 +6,7 @@ import { writeFileSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { execFileSync } from 'node:child_process'
+import { extractStructuredArticle, cleanAndFormatArticle, generateCleanSummary } from './format-news.js'
 
 const sql = neon(process.env.DATABASE_URL)
 
@@ -188,7 +189,12 @@ app.get('/alerts', async (c) => {
     FROM regulations
     WHERE verification_status = 'verified'
     ORDER BY published_date DESC`
-  return c.json(rows)
+  const sanitized = rows.map((r) => ({
+    ...r,
+    summary: generateCleanSummary(r.summary || r.content, r.title),
+    content: cleanAndFormatArticle(r.content || r.summary, r.title),
+  }))
+  return c.json(sanitized)
 })
 
 app.get('/financial-profile', async (c) => {
@@ -315,9 +321,9 @@ async function fetchAndIngestNews() {
       const res = await fetch(src.url, { headers: { 'User-Agent': 'KnowlyBot/1.0' }, signal: AbortSignal.timeout(10000) })
       if (!res.ok) continue
       const html = await res.text()
-      const $$ = cheerio.load(html)
-      $$('style, script, nav, header, footer, .nav, .menu, .sidebar, .breadcrumb, .pagination, .sidebar, .header, .footer, .nav, noscript, iframe, .cookie, .cookie-banner, .popup, .modal, aside, .ads, .advertisement, .navigation, .menu, .sidebar, .breadcrumb, .pagination, .header, .footer, .navbar, .menu-toggle, .mobile-menu, .header-top, .header-bottom, .top-bar, .bottom-bar, .social-links, .share-buttons, .tags, .categories, .author-box, .related-posts, .comments, .comment-form, .sidebar-left, .sidebar-right, .widget, .widget-area, .nav-menu, .main-menu, .site-header, .site-footer, .page-header, .page-footer, .post-meta, .entry-meta, .post-meta, .entry-meta, .byline, .post-date, .post-author, .post-tags, .post-categories, .post-navigation, .prev-post, .next-post, .pagination, .page-numbers, .related-posts, .related-articles, .similar-posts, .recommended-posts, .popular-posts, .recent-posts, .latest-posts, .featured-posts, .trending-posts, .popular-posts, .post-tags, .post-categories, .tag-cloud, .tag-cloud, .category-list, .archive-list, .search-form, .search-box, .search-input, .search-button, .subscribe-form, .newsletter-form, .email-signup, .rss-link, .feed-link, .social-icons, .social-links, .follow-us, .connect-with-us, .back-to-top, .scroll-to-top, .go-to-top').remove()
-      
+      const $ = cheerio.load(html)
+      $('style, script, nav, header, footer, aside, .cookie, .cookie-banner, .popup, .modal, .ads').remove()
+
       const candidates = []
       $('article a, .post-title a, .news-title a, .entry-title a, h2 a, h3 a, h1 a').each((_, el) => {
         const title = $(el).text().trim().replace(/\s+/g, ' ')
@@ -326,171 +332,41 @@ async function fetchAndIngestNews() {
         try { href = new URL(href, src.url).href } catch {}
         if (title.length > 20 && title.length < 200 && candidates.length < 6) candidates.push({ title, href })
       })
+
       if (candidates.length < 2) {
         $('h1, h2, h3').each((_, el) => {
           const title = $(el).text().trim().replace(/\s+/g, ' ')
           if (title.length > 20 && title.length < 200 && candidates.length < 3) candidates.push({ title, href: src.url })
         })
       }
+
       for (const { title, href } of candidates.slice(0, 2)) {
         const exists = await sql`SELECT id FROM regulations WHERE title = ${title} LIMIT 1`
         if (exists.length) continue
+
         let content = ''
         let summary = title
+        let articleTitle = title
+
         try {
           const artRes = await fetch(href, { headers: { 'User-Agent': 'KnowlyBot/1.0' }, signal: AbortSignal.timeout(8000) })
           if (artRes.ok) {
             const artHtml = await artRes.text()
-            const $$ = cheerio.load(artHtml)
-            $$('style, script, nav, header, footer, .nav, .menu, .sidebar, .breadcrumb, .pagination, .sidebar, .header, .footer, .nav, noscript, iframe, .cookie, .cookie-banner, .popup, .modal, aside, .ads, .advertisement, .navigation, .menu, .sidebar, .breadcrumb, .pagination, .header, .footer, .navbar, .menu-toggle, .mobile-menu, .header-top, .header-bottom, .top-bar, .bottom-bar, .social-links, .share-buttons, .tags, .categories, .author-box, .related-posts, .comments, .comment-form, .sidebar-left, .sidebar-right, .widget, .widget-area, .nav-menu, .main-menu, .site-header, .site-footer, .page-header, .page-footer, .post-meta, .entry-meta, .post-meta, .entry-meta, .byline, .post-date, .post-author, .post-tags, .post-categories, .post-navigation, .prev-post, .next-post, .pagination, .page-numbers, .related-posts, .related-articles, .similar-posts, .recommended-posts, .popular-posts, .recent-posts, .latest-posts, .featured-posts, .trending-posts, .popular-posts, .post-tags, .post-categories, .tag-cloud, .tag-cloud, .category-list, .archive-list, .search-form, .search-box, .search-input, .search-button, .subscribe-form, .newsletter-form, .email-signup, .rss-link, .feed-link, .social-icons, .social-links, .follow-us, .connect-with-us, .back-to-top, .scroll-to-top, .go-to-top').remove()
-            
-            const candidates = [
-              $$('article .entry-content').text(),
-              $$('article .content').text(),
-              $$('article .post-content').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-              $$('article .post-body').text(),
-              $$('article .article-content').text(),
-              $$('article .post-body').text(),
-              $$('article .entry').text(),
-            ]
-            
-            let body = ''
-            for (const cand of candidates) {
-              const cleaned = cand.trim().replace(/\s+/g, ' ')
-              if (cleaned.length > 200 && 
-                  !cleaned.includes('var(--') && 
-                  !cleaned.includes('.title-h') &&
-                  !cleaned.includes('font-weight:') &&
-                  !cleaned.includes('margin-top:') &&
-                  !cleaned.includes('color: var(') &&
-                  !cleaned.includes('.title-h') &&
-                  !cleaned.includes('font-size:') &&
-                  !cleaned.includes('margin-bottom:') &&
-                  !cleaned.includes('margin-top:') &&
-                  !cleaned.includes('padding:') &&
-                  !cleaned.includes('border-radius:') &&
-                  !cleaned.includes('box-shadow:') &&
-                  !cleaned.includes('background-color:') &&
-                  !cleaned.includes('border:') &&
-                  !cleaned.includes('display:') &&
-                  !cleaned.includes('flex') &&
-                  !cleaned.includes('justify-content:') &&
-                  !cleaned.includes('align-items:') &&
-                  !cleaned.includes('position:') &&
-                  !cleaned.includes('z-index:') &&
-                  !cleaned.includes('overflow:') &&
-                  !cleaned.includes('white-space:') &&
-                  !cleaned.includes('text-overflow:') &&
-                  !cleaned.includes('line-height:') &&
-                  !cleaned.includes('letter-spacing:') &&
-                  !cleaned.includes('text-transform:') &&
-                  !cleaned.includes('font-family:') &&
-                  !cleaned.includes('background:') &&
-                  !cleaned.includes('color:') &&
-                  !cleaned.includes('opacity:') &&
-                  !cleaned.includes('transition:') &&
-                  !cleaned.includes('transform:') &&
-                  !cleaned.includes('cursor:') &&
-                  !cleaned.includes('pointer-events:') &&
-                  !cleaned.includes('user-select:') &&
-                  !cleaned.includes('outline:') &&
-                  !cleaned.includes('::') &&
-                  !cleaned.includes('@media') &&
-                  !cleaned.includes('@keyframes') &&
-                  !cleaned.includes('!important') &&
-                  !cleaned.includes('Lire l\'article') &&
-                  !cleaned.includes('Lire la suite') &&
-                  !cleaned.includes('Voir plus') &&
-                  !cleaned.includes('Voir l\'article') &&
-                  !cleaned.includes('Read more') &&
-                  !cleaned.includes('Read article') &&
-                  !cleaned.includes('Read full') &&
-                  !cleaned.includes('...') &&
-                  !cleaned.match(/^[^{]*\{[^}]*\{/)) {
-                body = cleaned
-                break
-              }
-            }
-            
-            if (!body) {
-              const fallback = $$('main, #main, #content, .main-content, #main-content').text().trim().replace(/\s+/g, ' ')
-              if (fallback.length > 200 && 
-                  !fallback.includes('var(--') &&
-                  !fallback.includes('font-weight:') &&
-                  !fallback.includes('margin-top:') &&
-                  !fallback.includes('Lire l\'article') &&
-                  !fallback.includes('Lire la suite')) {
-                body = fallback
-              }
-            }
-            
-            if (body) {
-              body = body
-                .split(/(?<=[.!?])\s+/)
-                .filter(s => {
-                  const trimmed = s.trim()
-                  const ok = trimmed.length > 15 && 
-                         !trimmed.match(/^[\s]*[\.#\w-]+\s*\{/) && 
-                         !trimmed.includes('var(--') &&
-                         !trimmed.includes('font-weight:') &&
-                         !trimmed.includes('margin-top:') &&
-                         !trimmed.includes('color:') &&
-                         !trimmed.includes('font-size:') &&
-                         !trimmed.includes('{') &&
-                         !trimmed.includes('}') &&
-                         !trimmed.includes(';') &&
-                         !trimmed.includes(':') &&
-                         !trimmed.includes('Lire l\'article') &&
-                         !trimmed.includes('Lire la suite') &&
-                         !trimmed.includes('Voir plus') &&
-                         !trimmed.includes('Voir l\'article') &&
-                         !trimmed.includes('Read more') &&
-                         !trimmed.includes('Read article') &&
-                         trimmed.length > 20
-                  return true
-                })
-                .join(' ')
-                .trim()
-            }
-            
-            if (body.length > 120) {
-              content = body.slice(0, 4000)
-              const sentences = body.match(/[^.!?]+[.!?]+/g) || [body]
-              summary = sentences.slice(0, 2).join(' ').trim().slice(0, 320)
-            }
+            const structured = extractStructuredArticle(artHtml, title)
+            articleTitle = structured.title || title
+            summary = structured.summary || title
+            content = structured.content || ''
           }
         } catch {}
-        const severity = /urgent|important|critical|tax|impôt/i.test(title) ? 'critical' : 'info'
+
+        if (!content || content.length < 50) {
+          content = cleanAndFormatArticle(summary, title)
+        }
+
+        const severity = /urgent|important|critical|tax|impôt/i.test(articleTitle) ? 'critical' : 'info'
         await sql`
           INSERT INTO regulations (title, summary, content, category, severity, source_name, source_url, published_date, verification_status)
-          VALUES (${title}, ${summary}, ${content}, ${src.category}, ${severity}, ${src.source_name}, ${href}, CURRENT_DATE, 'verified')`
+          VALUES (${articleTitle}, ${summary}, ${content}, ${src.category}, ${severity}, ${src.source_name}, ${href}, CURRENT_DATE, 'verified')`
         inserted++
       }
       await sql`UPDATE news_sources SET last_fetched = now() WHERE id = ${src.id}`

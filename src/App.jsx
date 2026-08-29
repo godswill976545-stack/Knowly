@@ -5,6 +5,7 @@ import { api, formatDate } from './api.js'
 import { LANGUAGES, translate } from './i18n/index.js'
 import Landing from './components/Landing.jsx'
 import AuthScreen from './components/Auth.jsx'
+import ArticleRenderer from './components/ArticleRenderer.jsx'
 
 const CLERK_ACTIVE = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
 
@@ -236,8 +237,10 @@ function AlertDetail({ alert, onBack, onAsk, t }) {
             <Icon name="verified" className="text-[14px]" /> {t('alerts.official')}
           </span>
         </div>
-        <h1 className="mb-3 text-[26px] font-bold leading-tight tracking-[-0.015em] text-on-surface md:text-[28px]">{alert.title}</h1>
-        <p className="text-body-lg leading-relaxed text-on-surface-variant">{alert.content || alert.summary}</p>
+        <h1 className="mb-4 text-[26px] font-bold leading-tight tracking-[-0.015em] text-on-surface md:text-[28px]">{alert.title}</h1>
+        <div className="mt-4 border-t border-outline-variant/50 pt-4">
+          <ArticleRenderer content={alert.content || alert.summary} />
+        </div>
         <dl className="mt-6 grid grid-cols-1 gap-4 rounded-xl bg-surface-container-low p-4 text-caption sm:grid-cols-3">
           <div>
             <dt className="font-semibold text-on-surface">{t('alerts.source')}</dt>
