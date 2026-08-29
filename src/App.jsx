@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { SignedIn, SignedOut, SignIn, SignUp, UserButton, useUser } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { api, formatDate } from './api.js'
 import { LANGUAGES, translate } from './i18n/index.js'
@@ -7,16 +7,6 @@ import Landing from './components/Landing.jsx'
 import AuthScreen from './components/Auth.jsx'
 
 const CLERK_ACTIVE = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
-
-const clerkAppearance = {
-  variables: {
-    fontFamily: "'Inter', system-ui, sans-serif",
-    colorPrimary: '#131b2e',
-    colorBackground: '#ffffff',
-    colorText: '#0b1c30',
-    borderRadius: '0.75rem',
-  },
-}
 
 function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash)
@@ -28,66 +18,45 @@ function useHashRoute() {
   return hash
 }
 
-function AuthScreen() {
-  const hash = useHashRoute()
-  const isSignUp = hash.includes('sign-up')
-  return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <div className="flex flex-col justify-between bg-primary p-8 text-white md:w-[42%] md:p-12">
-        <div>
-          <div className="inline-flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-primary">
-              <Icon name="gavel" className="text-[18px]" />
-            </div>
-            <span className="text-[18px] font-bold tracking-tight">Knowly</span>
-          </div>
-          <p className="mt-2 text-body-md text-white/70">Guide juridique & financier — Bénin</p>
-          <div className="mt-10 space-y-5">
-            <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10"><Icon name="gavel" className="text-[16px]" /></span>
-              <p className="text-body-md leading-relaxed text-white/90">Comprenez les règles qui vous concernent, sans jargon.</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10"><Icon name="savings" className="text-[16px]" /></span>
-              <p className="text-body-md leading-relaxed text-white/90">Gérez et faites fructifier votre argent, en CFA.</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10"><Icon name="verified" className="text-[16px]" /></span>
-              <p className="text-body-md leading-relaxed text-white/90">Un seul endroit, sources officielles vérifiées.</p>
-            </div>
-          </div>
-        </div>
-        <p className="text-caption leading-relaxed text-white/60">
-          Sécurité juridique Knowly : ceci est un guide, pas un avis juridique. Vérifiez les décisions importantes auprès de l'autorité compétente.
-        </p>
-      </div>
-      <div className="flex flex-1 items-center justify-center bg-surface p-6 md:p-10">
-        <div className="w-full max-w-md">
-          {isSignUp ? (
-            <SignUp routing="virtual" signInUrl="#/sign-in" fallbackRedirectUrl="/" appearance={clerkAppearance} />
-          ) : (
-            <SignIn routing="virtual" signUpUrl="#/sign-up" fallbackRedirectUrl="/" appearance={clerkAppearance} />
-          )}
-          <button
-            onClick={() => (window.location.hash = '')}
-            className="mx-auto mt-4 flex items-center gap-1 text-caption text-on-surface-variant hover:text-on-surface"
-          >
-            <Icon name="arrow_back" className="text-[14px]" /> Retour à l'accueil
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SignedOutLanding({ t }) {
+function SignedOutLanding({ t, onGuestLogin, currentLang, onLangChange }) {
   const hash = useHashRoute()
   const isAuth = hash.includes('sign-in') || hash.includes('sign-up')
-  if (isAuth) return <AuthScreen t={t} />
+  if (isAuth) {
+    return (
+      <AuthScreen
+        t={t}
+        onGuestLogin={onGuestLogin}
+        currentLang={currentLang}
+        onLangChange={onLangChange}
+      />
+    )
+  }
   return <Landing onSignIn={() => (window.location.hash = '#/sign-in')} />
 }
 
-function UserBadge() {
+function UserBadge({ guestMode, onExitGuest }) {
+  if (guestMode) {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-white font-bold text-xs">
+            GM
+          </div>
+          <div className="text-left">
+            <div className="text-label-md font-semibold text-on-surface leading-tight">Grace Mensah</div>
+            <div className="text-[10px] text-secondary font-medium">Mode Démo</div>
+          </div>
+        </div>
+        <button
+          onClick={onExitGuest}
+          title="Quitter le mode démo"
+          className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant hover:text-error transition"
+        >
+          <Icon name="logout" className="text-[16px]" />
+        </button>
+      </div>
+    )
+  }
   if (!CLERK_ACTIVE) {
     return (
       <div className="flex items-center gap-2">
@@ -111,13 +80,26 @@ function ClerkUserName() {
   return <span className="text-label-md font-medium text-on-surface">{user?.firstName ?? user?.username ?? 'Mon compte'}</span>
 }
 
-function TopBarUser() {
+function TopBarUser({ guestMode, onExitGuest }) {
+  if (guestMode) {
+    return (
+      <button
+        onClick={onExitGuest}
+        title="Quitter le mode démo"
+        className="flex items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1 text-caption font-medium text-on-surface hover:bg-error-container hover:text-on-error-container transition"
+      >
+        <span className="h-2 w-2 rounded-full bg-secondary" />
+        <span>Démo</span>
+        <Icon name="logout" className="text-[14px]" />
+      </button>
+    )
+  }
   if (!CLERK_ACTIVE) return <Icon name="account_circle" className="text-[22px]" />
   return <UserButton afterSignOutUrl="/" />
 }
 
-function Greeting({ t }) {
-  if (!CLERK_ACTIVE) return <>{t('home.greeting', { name: 'Grace' })}</>
+function Greeting({ t, guestMode }) {
+  if (guestMode || !CLERK_ACTIVE) return <>{t('home.greeting', { name: 'Grace' })}</>
   return <ClerkGreeting t={t} />
 }
 
@@ -436,6 +418,9 @@ function Home({ data, loading, error, goAi, onViewArticle, t }) {
               </section>
             </motion.div>
           </section>
+        </motion.div>
+      </div>
+    </>
   )
 }
 
@@ -973,6 +958,7 @@ function Profile({ data, loading, error, reload, t, lang, setLang }) {
 export default function App() {
   const [tab, setTab] = useState('home')
   const [lang, setLang] = useState('fr')
+  const [guestMode, setGuestMode] = useState(false)
   const [pendingExplain, setPendingExplain] = useState(null)
   const [selectedAlert, setSelectedAlert] = useState(null)
   const [state, setState] = useState({
@@ -1023,6 +1009,11 @@ export default function App() {
   const askAboutArticle = (alert) => { setSelectedAlert(null); goAi(alert) }
   const data = { ...state, reload: load }
 
+  const handleExitGuest = () => {
+    setGuestMode(false)
+    window.location.hash = ''
+  }
+
   const shell = (
     <div className="flex min-h-screen flex-col md:flex-row">
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-outline-variant/60 bg-white/90 px-4 backdrop-blur-md md:hidden">
@@ -1032,7 +1023,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-3 text-on-surface-variant">
           <Icon name="notifications" className="text-[22px]" />
-          <TopBarUser />
+          <TopBarUser guestMode={guestMode} onExitGuest={handleExitGuest} />
         </div>
       </header>
 
@@ -1065,7 +1056,7 @@ export default function App() {
           })}
         </div>
         <div className="border-t border-outline-variant/50 px-2 pb-2 pt-4">
-          <UserBadge />
+          <UserBadge guestMode={guestMode} onExitGuest={handleExitGuest} />
         </div>
       </nav>
 
@@ -1075,7 +1066,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-on-surface-variant">
             <span className="hidden items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1.5 text-caption font-medium lg:inline-flex"><Icon name="verified" className="text-[14px] text-secondary" /> Sources vérifiées</span>
             <Icon name="notifications" className="text-[20px]" />
-            <TopBarUser />
+            <TopBarUser guestMode={guestMode} onExitGuest={handleExitGuest} />
           </div>
         </header>
 
@@ -1119,12 +1110,17 @@ export default function App() {
     </div>
   )
 
-  if (!CLERK_ACTIVE) return shell
+  if (!CLERK_ACTIVE || guestMode) return shell
 
   return (
     <>
       <SignedOut>
-        <SignedOutLanding t={t} />
+        <SignedOutLanding
+          t={t}
+          onGuestLogin={() => setGuestMode(true)}
+          currentLang={lang}
+          onLangChange={setLang}
+        />
       </SignedOut>
       <SignedIn>{shell}</SignedIn>
     </>
