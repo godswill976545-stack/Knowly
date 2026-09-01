@@ -93,7 +93,7 @@ function AuthContent({
         const target = tab === 'sign-in' ? signIn : signUp
         await target.authenticateWithRedirect({
           strategy: provider,
-          redirectUrl: '/sso-callback',
+          redirectUrl: '/api/sso-callback',
           redirectUrlComplete: '/',
         })
       } else {
