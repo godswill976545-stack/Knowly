@@ -681,6 +681,35 @@ app.post('/explain/upload', async (c) => {
   return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
 })
 
+// ---- Clerk SSO Callback ----
+app.get('/sso-callback', async (c) => {
+  if (!process.env.CLERK_SECRET_KEY) {
+    return c.redirect('/')
+  }
+  try {
+    const { createClerkClient } = await import('@clerk/backend')
+    const clerk = createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY,
+      publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
+    })
+    const requestState = await clerk.authenticateRequest(c.req.raw, {
+      authorizedParties: [
+        new URL(c.req.url).origin,
+        'http://localhost:3001',
+        'http://localhost:5173',
+        'https://knowly-eta-ivory.vercel.app',
+      ],
+    })
+    if (requestState.status === 'signed-in') {
+      return requestState.toResponse()
+    }
+    return c.redirect('/')
+  } catch (err) {
+    console.error('SSO callback error:', err.message)
+    return c.redirect('/')
+  }
+})
+
 app.onError((err, c) => {
   console.error(err)
   return c.json({ error: 'Internal server error' }, 500)
