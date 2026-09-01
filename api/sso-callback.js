@@ -24,10 +24,8 @@ export async function GET(request) {
       ],
     })
 
-    const response = requestState.toResponse()
-
     if (requestState.status === 'signed-in') {
-      return response
+      return requestState.toResponse()
     }
 
     return Response.redirect(url.origin, 302)
