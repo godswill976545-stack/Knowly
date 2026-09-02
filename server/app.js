@@ -11,7 +11,7 @@ import { extractStructuredArticle, cleanAndFormatArticle, generateCleanSummary }
 const sql = neon(process.env.DATABASE_URL)
 
 const ZEN_BASE_URL = 'https://opencode.ai/zen/v1'
-const ZEN_MODEL = process.env.ZEN_MODEL || 'nemotron-3-ultra-free'
+const ZEN_MODEL = process.env.ZEN_MODEL || 'mimo-v2.5-free'
 
 const DEMO_USER_ID = 1
 
@@ -261,11 +261,10 @@ async function callZen(message, systemPrompt) {
     model: ZEN_MODEL,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `${message}\n\n/no_think` },
+      { role: 'user', content: message },
     ],
     temperature: 0.3,
     max_tokens: 1800,
-    chat_template_kwargs: { thinking: false },
   }
   // Ask for JSON object mode if provider supports it (ignored if not)
   try {
