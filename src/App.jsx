@@ -1080,7 +1080,13 @@ function Profile({ data, loading, error, reload, t, lang, setLang }) {
 
 export default function App() {
   const [tab, setTab] = useState('home')
-  const [lang, setLang] = useState('fr')
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('moncheck-lang') || 'fr' } catch { return 'fr' }
+  })
+  const setLangPersist = useCallback((code) => {
+    setLang(code)
+    try { localStorage.setItem('moncheck-lang', code) } catch {}
+  }, [])
   const [guestMode, setGuestMode] = useState(false)
   const [pendingExplain, setPendingExplain] = useState(null)
   const [selectedAlert, setSelectedAlert] = useState(null)
@@ -1105,11 +1111,11 @@ export default function App() {
         api.preferences(),
       ])
       setState({ alerts, profile, goals, preferences, loading: false, error: null })
-      if (preferences?.language) setLang(preferences.language)
+      if (preferences?.language) setLangPersist(preferences.language)
     } catch (err) {
       setState((prev) => ({ ...prev, loading: false, error: err.message }))
     }
-  }, [])
+  }, [setLangPersist])
 
   useEffect(() => {
     load()
@@ -1202,7 +1208,7 @@ export default function App() {
               {tab === 'alerts' && <Alerts data={data} loading={state.loading} error={state.error} goAi={goAi} onViewArticle={openArticle} t={t} />}
               {tab === 'money' && <Money data={data} loading={state.loading} error={state.error} reload={load} t={t} />}
               {tab === 'ai' && <AskAI t={t} pendingExplain={pendingExplain} clearPending={clearPending} />}
-              {tab === 'profile' && <Profile data={data} loading={state.loading} error={state.error} reload={load} t={t} lang={lang} setLang={setLang} />}
+              {tab === 'profile' && <Profile data={data} loading={state.loading} error={state.error} reload={load} t={t} lang={lang} setLang={setLangPersist} />}
             </>
           )}
           <footer className="border-t border-outline-variant/60 pt-6 text-center">
@@ -1242,7 +1248,7 @@ export default function App() {
           t={t}
           onGuestLogin={() => setGuestMode(true)}
           currentLang={lang}
-          onLangChange={setLang}
+          onLangChange={setLangPersist}
         />
       </SignedOut>
       <SignedIn>{shell}</SignedIn>

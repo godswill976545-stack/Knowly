@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { useSignIn, useSignUp } from '@clerk/clerk-react'
 import { LANGUAGES } from '../i18n/index.js'
@@ -41,13 +41,15 @@ function AppleIcon({ className = 'h-5 w-5' }) {
 }
 
 function AuthContent({
+  t,
   onGuestLogin,
   currentLang = 'fr',
   onLangChange,
   clerkLoaded = false,
   signIn = null,
   signUp = null,
-  setActive = null,
+  setSignInActive = null,
+  setSignUpActive = null,
 }) {
   const [tab, setTab] = useState(() => (window.location.hash.includes('sign-up') ? 'sign-up' : 'sign-in'))
   const reduce = useReducedMotion()
@@ -65,12 +67,32 @@ function AuthContent({
   const [verifying, setVerifying] = useState(false)
   const [verificationCode, setVerificationCode] = useState('')
 
+  const tr = t || ((k) => k)
+
+  // Keep tab in sync with hash changes (e.g. browser back/forward)
+  useEffect(() => {
+    const onHash = () => {
+      const h = window.location.hash
+      if (h.includes('sign-up')) setTab('sign-up')
+      else if (h.includes('sign-in')) setTab('sign-in')
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   const switchTab = (newTab) => {
     setTab(newTab)
     setError(null)
     setSuccess(null)
     setVerifying(false)
     window.location.hash = `#/${newTab}`
+  }
+
+  const handleLangChange = (code) => {
+    // Call parent handler which updates App lang state
+    if (onLangChange) onLangChange(code)
+    // Also persist locally so reload keeps choice
+    try { localStorage.setItem('moncheck-lang', code) } catch {}
   }
 
   // Password strength calculation
@@ -91,9 +113,10 @@ function AuthContent({
     try {
       if (clerkLoaded && (signIn || signUp)) {
         const target = tab === 'sign-in' ? signIn : signUp
+        if (!target) throw new Error('Clerk not ready')
         await target.authenticateWithRedirect({
           strategy: provider,
-          redirectUrl: window.location.origin + '/api/sso-callback',
+          redirectUrl: window.location.origin + '/sso-callback',
           redirectUrlComplete: window.location.origin + '/',
         })
       } else {
@@ -101,7 +124,7 @@ function AuthContent({
         window.location.hash = ''
       }
     } catch (err) {
-      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Erreur de connexion sociale')
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorSocial'))
     } finally {
       setLoading(false)
     }
@@ -110,29 +133,37 @@ function AuthContent({
   const handleSignIn = async (e) => {
     e.preventDefault()
     if (!email || !password) {
-      setError('Veuillez renseigner votre email et mot de passe.')
+      setError(tr('auth.errorMissingFields'))
       return
     }
     setError(null)
     setLoading(true)
     try {
-      if (clerkLoaded && signIn) {
+      if (clerkLoaded && signIn && setSignInActive) {
         const result = await signIn.create({
           identifier: email,
           password: password,
         })
         if (result.status === 'complete') {
-          await setActive({ session: result.createdSessionId })
+          await setSignInActive({ session: result.createdSessionId })
+          // Clear hash to trigger SignedIn view; force navigation to root
           window.location.hash = ''
+          // Small delay to ensure Clerk propagates, then go to home
+          setTimeout(() => {
+            if (window.location.hash !== '') window.location.hash = ''
+            // Ensure we are at root path
+            if (window.location.pathname !== '/') window.location.pathname = '/'
+          }, 50)
         } else {
-          setError(`Action requise. Statut : ${result.status}`)
+          // Handle case where sign-in needs second factor or email verification
+          setError(tr('auth.errorActionRequired', { status: result.status }) || `Action requise. Statut : ${result.status}`)
         }
       } else {
         onGuestLogin?.()
         window.location.hash = ''
       }
     } catch (err) {
-      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Identifiants invalides')
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorInvalidCredentials'))
     } finally {
       setLoading(false)
     }
@@ -141,11 +172,11 @@ function AuthContent({
   const handleSignUp = async (e) => {
     e.preventDefault()
     if (!email || !password) {
-      setError('Veuillez renseigner tous les champs obligatoires.')
+      setError(tr('auth.errorMissingFieldsSignup'))
       return
     }
     if (password.length < 8) {
-      setError('Le mot de passe doit comporter au moins 8 caractères.')
+      setError(tr('auth.errorPasswordLength'))
       return
     }
     setError(null)
@@ -162,13 +193,13 @@ function AuthContent({
         })
         await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
         setVerifying(true)
-        setSuccess(`Un code de validation a été envoyé à ${email}`)
+        setSuccess(tr('auth.codeSent', { email }) || `Un code de validation a été envoyé à ${email}`)
       } else {
         onGuestLogin?.()
         window.location.hash = ''
       }
     } catch (err) {
-      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Erreur lors de la création du compte')
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorCreateAccount'))
     } finally {
       setLoading(false)
     }
@@ -180,20 +211,24 @@ function AuthContent({
     setError(null)
     setLoading(true)
     try {
-      if (clerkLoaded && signUp) {
+      if (clerkLoaded && signUp && setSignUpActive) {
         const completeSignUp = await signUp.attemptEmailAddressVerification({ code: verificationCode })
         if (completeSignUp.status === 'complete') {
-          await setActive({ session: completeSignUp.createdSessionId })
+          await setSignUpActive({ session: completeSignUp.createdSessionId })
           window.location.hash = ''
+          setTimeout(() => {
+            if (window.location.hash !== '') window.location.hash = ''
+            if (window.location.pathname !== '/') window.location.pathname = '/'
+          }, 50)
         } else {
-          setError('Vérification incomplète. Statut : ' + completeSignUp.status)
+          setError(tr('auth.errorVerificationIncomplete', { status: completeSignUp.status }) || 'Vérification incomplète. Statut : ' + completeSignUp.status)
         }
       } else {
         onGuestLogin?.()
         window.location.hash = ''
       }
     } catch (err) {
-      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Code de vérification incorrect')
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorWrongCode'))
     } finally {
       setLoading(false)
     }
@@ -222,39 +257,40 @@ function AuthContent({
               </div>
               <div>
                 <span className="text-[20px] font-bold tracking-tight text-white">MonCheck</span>
-                <span className="block text-[11px] font-medium tracking-wide text-white/60">Guide juridique & financier · Bénin</span>
+                <span className="block text-[11px] font-medium tracking-wide text-white/60">{tr('auth.brandSub')}</span>
               </div>
             </div>
 
-            {/* Quick Lang Switch */}
-            {onLangChange && (
-              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-                {LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    onClick={() => onLangChange(l.code)}
-                    className={`rounded-full px-2.5 py-0.5 font-medium transition ${
-                      currentLang === l.code ? 'bg-white text-primary font-bold shadow-sm' : 'text-white/70 hover:text-white'
-                    }`}
-                  >
-                    {l.code.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Quick Lang Switch - FIXED: now properly calls handleLangChange which updates App state */}
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+              {LANGUAGES.map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => handleLangChange(l.code)}
+                  className={`rounded-full px-2.5 py-0.5 font-medium transition ${
+                    currentLang === l.code ? 'bg-white text-primary font-bold shadow-sm' : 'text-white/70 hover:text-white'
+                  }`}
+                  aria-pressed={currentLang === l.code}
+                  aria-label={`Switch to ${l.label}`}
+                >
+                  {l.code.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Tagline & Official Verified Badge */}
           <div className="mt-8">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3.5 py-1 text-[12px] font-medium text-white/90">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Sources officielles vérifiées (gouv.bj, SGG, DGI)</span>
+              <span>{tr('auth.officialVerified')}</span>
             </div>
             <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white lg:text-[34px]">
-              Vos droits expliqués en <span className="text-secondary italic">clair</span>. Votre argent en ordre.
+              {tr('auth.heroTitle1')} <span className="text-secondary italic">{tr('auth.heroTitle2')}</span>{tr('auth.heroTitle3')}
             </h1>
             <p className="mt-3 text-body-md leading-relaxed text-white/75">
-              Rejoignez les citoyens, entrepreneurs et salariés qui utilisent MonCheck pour décrypter les lois béninoises et développer leur épargne.
+              {tr('auth.heroSubtitle')}
             </p>
           </div>
 
@@ -265,9 +301,9 @@ function AuthContent({
                 <Icon name="verified_user" className="text-[18px]" />
               </div>
               <div>
-                <h3 className="text-[14px] font-semibold text-white">Lois & fiscalité sans jargon</h3>
+                <h3 className="text-[14px] font-semibold text-white">{tr('auth.feature1Title')}</h3>
                 <p className="mt-0.5 text-caption leading-relaxed text-white/70">
-                  Décrets, impôts, baux et contrats résumés en 30 secondes avec citations exactes des articles.
+                  {tr('auth.feature1Desc')}
                 </p>
               </div>
             </div>
@@ -277,9 +313,9 @@ function AuthContent({
                 <Icon name="savings" className="text-[18px]" />
               </div>
               <div>
-                <h3 className="text-[14px] font-semibold text-white">Gestion de budget en Francs CFA</h3>
+                <h3 className="text-[14px] font-semibold text-white">{tr('auth.feature2Title')}</h3>
                 <p className="mt-0.5 text-caption leading-relaxed text-white/70">
-                  Suivi personnalisé de vos revenus, dépenses, capacité d'épargne et objectifs en FCFA.
+                  {tr('auth.feature2Desc')}
                 </p>
               </div>
             </div>
@@ -289,9 +325,9 @@ function AuthContent({
                 <Icon name="smart_toy" className="text-[18px]" />
               </div>
               <div>
-                <h3 className="text-[14px] font-semibold text-white">Assistant IA & OCR de documents</h3>
+                <h3 className="text-[14px] font-semibold text-white">{tr('auth.feature3Title')}</h3>
                 <p className="mt-0.5 text-caption leading-relaxed text-white/70">
-                  Scannez ou collez une décision administrative ou une quittance pour une analyse immédiate.
+                  {tr('auth.feature3Desc')}
                 </p>
               </div>
             </div>
@@ -302,9 +338,9 @@ function AuthContent({
         <div className="relative z-10 mt-8 border-t border-white/10 pt-6">
           <div className="flex items-center justify-between text-caption text-white/60">
             <span className="flex items-center gap-1.5">
-              <Icon name="lock" className="text-[14px] text-emerald-400" /> Données 100% chiffrées & privées
+              <Icon name="lock" className="text-[14px] text-emerald-400" /> {tr('auth.encrypted')}
             </span>
-            <span>Bénin · 2026</span>
+            <span>{tr('auth.footerYear')}</span>
           </div>
         </div>
       </div>
@@ -318,14 +354,14 @@ function AuthContent({
             className="btn-duo btn-duo--white group px-4 py-2 text-label-md"
           >
             <Icon name="arrow_back" className="text-[16px] transition-transform group-hover:-translate-x-0.5" />
-            <span>Retour à l'accueil</span>
+            <span>{tr('auth.backHome')}</span>
           </button>
 
           <button
             onClick={handleDemoAccess}
             className="btn-duo btn-duo--mint px-3.5 py-1.5 text-caption"
           >
-            <Icon name="bolt" className="text-[16px] text-secondary" /> Mode Démo Direct
+            <Icon name="bolt" className="text-[16px] text-secondary" /> {tr('auth.demoDirect')}
           </button>
         </div>
 
@@ -334,6 +370,7 @@ function AuthContent({
           {/* Segmented Tab Switcher */}
           <div className="relative mb-8 flex rounded-full border border-outline-variant bg-surface-container-low p-1.5 shadow-sm">
             <button
+              type="button"
               onClick={() => switchTab('sign-in')}
               className={`relative z-10 flex-1 rounded-full py-2.5 text-center text-label-md font-semibold transition ${
                 tab === 'sign-in' ? 'text-white' : 'text-on-surface-variant hover:text-on-surface'
@@ -346,9 +383,10 @@ function AuthContent({
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                 />
               )}
-              Se connecter
+              {tr('auth.signInTab')}
             </button>
             <button
+              type="button"
               onClick={() => switchTab('sign-up')}
               className={`relative z-10 flex-1 rounded-full py-2.5 text-center text-label-md font-semibold transition ${
                 tab === 'sign-up' ? 'text-white' : 'text-on-surface-variant hover:text-on-surface'
@@ -361,7 +399,7 @@ function AuthContent({
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                 />
               )}
-              Créer un compte
+              {tr('auth.signUpTab')}
             </button>
           </div>
 
@@ -369,17 +407,17 @@ function AuthContent({
           <div className="mb-6">
             <h2 className="text-[24px] font-bold tracking-tight text-on-surface">
               {verifying
-                ? 'Vérifiez votre adresse email'
+                ? tr('auth.verifyTitle')
                 : tab === 'sign-in'
-                ? 'Bienvenue sur MonCheck'
-                : 'Rejoignez MonCheck gratuitement'}
+                ? tr('auth.signInTitle')
+                : tr('auth.signUpTitle')}
             </h2>
             <p className="mt-1.5 text-body-md text-on-surface-variant">
               {verifying
-                ? 'Entrez le code à 6 chiffres envoyé à votre adresse e-mail.'
+                ? tr('auth.verifySubtitle')
                 : tab === 'sign-in'
-                ? 'Accédez à vos alertes juridiques et votre espace financier.'
-                : 'Accès instantané aux textes de lois expliqués et outils d\'épargne.'}
+                ? tr('auth.signInSubtitle')
+                : tr('auth.signUpSubtitle')}
             </p>
           </div>
 
@@ -413,7 +451,7 @@ function AuthContent({
           {verifying ? (
             <form onSubmit={handleVerifyCode} className="space-y-5">
               <div>
-                <label className="mb-2 block text-label-md font-semibold text-on-surface">Code de validation</label>
+                <label className="mb-2 block text-label-md font-semibold text-on-surface">{tr('auth.verificationCode')}</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -433,11 +471,11 @@ function AuthContent({
                 {loading ? (
                   <>
                     <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span>Validation en cours...</span>
+                    <span>{tr('auth.validating')}</span>
                   </>
                 ) : (
                   <>
-                    <span>Valider mon inscription</span>
+                    <span>{tr('auth.validate')}</span>
                     <Icon name="check" className="text-[18px]" />
                   </>
                 )}
@@ -448,7 +486,7 @@ function AuthContent({
                 onClick={() => setVerifying(false)}
                 className="w-full text-center text-caption font-medium text-on-surface-variant hover:text-on-surface"
               >
-                ← Revenir au formulaire d'inscription
+                {tr('auth.backToSignup')}
               </button>
             </form>
           ) : (
@@ -459,7 +497,7 @@ function AuthContent({
                   type="button"
                   onClick={() => handleOAuth('oauth_google')}
                   disabled={loading}
-                  className="btn-duo btn-duo--white flex flex-1 items-center justify-center gap-2 py-3 text-label-md"
+                  className="btn-duo btn-duo--white flex flex-1 items-center justify-center gap-2 py-3 text-label-md disabled:opacity-50"
                 >
                   <GoogleIcon className="h-4 w-4" />
                   <span>Google</span>
@@ -469,7 +507,7 @@ function AuthContent({
                   type="button"
                   onClick={() => handleOAuth('oauth_apple')}
                   disabled={loading}
-                  className="btn-duo btn-duo--white flex flex-1 items-center justify-center gap-2 py-3 text-label-md"
+                  className="btn-duo btn-duo--white flex flex-1 items-center justify-center gap-2 py-3 text-label-md disabled:opacity-50"
                 >
                   <AppleIcon className="h-4 w-4" />
                   <span>Apple</span>
@@ -482,7 +520,7 @@ function AuthContent({
                   <div className="w-full border-t border-outline-variant/70" />
                 </div>
                 <span className="relative bg-surface px-4 text-caption font-medium text-on-surface-variant">
-                  ou avec votre adresse e-mail
+                  {tr('auth.orEmail')}
                 </span>
               </div>
 
@@ -495,13 +533,13 @@ function AuthContent({
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                   >
-                    <label className="mb-1.5 block text-label-md font-semibold text-on-surface">Nom complet</label>
+                    <label className="mb-1.5 block text-label-md font-semibold text-on-surface">{tr('auth.fullName')}</label>
                     <div className="relative">
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Ex: Grace Mensah"
+                        placeholder={tr('auth.fullNamePlaceholder')}
                         className="w-full rounded-full border border-outline-variant bg-white pl-11 pr-4 py-3 text-body-md text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                         required={tab === 'sign-up'}
                       />
@@ -512,13 +550,13 @@ function AuthContent({
 
                 {/* Email Address */}
                 <div>
-                  <label className="mb-1.5 block text-label-md font-semibold text-on-surface">Adresse e-mail</label>
+                  <label className="mb-1.5 block text-label-md font-semibold text-on-surface">{tr('auth.email')}</label>
                   <div className="relative">
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="koffi@exemple.bj"
+                      placeholder={tr('auth.emailPlaceholder')}
                       className="w-full rounded-full border border-outline-variant bg-white pl-11 pr-4 py-3 text-body-md text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                       required
                     />
@@ -529,17 +567,17 @@ function AuthContent({
                 {/* Password Input */}
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">
-                    <label className="text-label-md font-semibold text-on-surface">Mot de passe</label>
+                    <label className="text-label-md font-semibold text-on-surface">{tr('auth.password')}</label>
                     {tab === 'sign-in' && (
                       <a
                         href="#/sign-in"
                         onClick={(e) => {
                           e.preventDefault()
-                          alert('Un lien de réinitialisation sera envoyé à votre adresse email.')
+                          alert(tr('auth.resetAlert'))
                         }}
                         className="text-caption font-semibold text-primary hover:underline"
                       >
-                        Mot de passe oublié ?
+                        {tr('auth.forgotPassword')}
                       </a>
                     )}
                   </div>
@@ -572,9 +610,9 @@ function AuthContent({
                         <div className={`h-1.5 flex-1 rounded-full transition-colors ${passStrength >= 3 ? 'bg-emerald-500' : 'bg-surface-container-high'}`} />
                       </div>
                       <p className="text-[11px] text-on-surface-variant">
-                        {passStrength <= 1 && 'Mot de passe faible (minimum 8 caractères)'}
-                        {passStrength === 2 && 'Moyen (ajoutez des chiffres ou majuscules)'}
-                        {passStrength >= 3 && 'Excellent mot de passe sécurisé'}
+                        {passStrength <= 1 && tr('auth.passWeak')}
+                        {passStrength === 2 && tr('auth.passMedium')}
+                        {passStrength >= 3 && tr('auth.passStrong')}
                       </p>
                     </div>
                   )}
@@ -591,13 +629,12 @@ function AuthContent({
                       className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/20"
                     />
                     <label htmlFor="remember" className="text-caption text-on-surface-variant cursor-pointer">
-                      Se souvenir de moi sur cet appareil
+                      {tr('auth.rememberMe')}
                     </label>
                   </div>
                 ) : (
                   <div className="text-caption leading-relaxed text-on-surface-variant pt-1">
-                    En créant un compte, vous acceptez le{' '}
-                    <span className="font-semibold text-on-surface">guide citoyen et la charte de confidentialité</span> de MonCheck.
+                    {tr('auth.terms1')} <span className="font-semibold text-on-surface">{tr('auth.termsStrong')}</span> {tr('auth.terms2')}
                   </div>
                 )}
 
@@ -610,11 +647,11 @@ function AuthContent({
                   {loading ? (
                     <>
                       <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      <span>{tab === 'sign-in' ? 'Connexion en cours...' : 'Création du compte...'}</span>
+                      <span>{tab === 'sign-in' ? tr('auth.connecting') : tr('auth.creating')}</span>
                     </>
                   ) : (
                     <>
-                      <span>{tab === 'sign-in' ? 'Se connecter à MonCheck' : 'Créer mon compte gratuit'}</span>
+                      <span>{tab === 'sign-in' ? tr('auth.signInCta') : tr('auth.signUpCta')}</span>
                       <Icon name="arrow_forward" className="text-[18px]" />
                     </>
                   )}
@@ -633,8 +670,8 @@ function AuthContent({
                       <Icon name="visibility" className="text-[16px]" />
                     </div>
                     <div className="text-left">
-                      <div className="text-label-md font-bold text-on-secondary-container">Explorer en mode Démo</div>
-                      <div className="text-[11px] text-on-secondary-container/80">Accès direct sans inscription</div>
+                      <div className="text-label-md font-bold text-on-secondary-container">{tr('auth.exploreDemo')}</div>
+                      <div className="text-[11px] text-on-secondary-container/80">{tr('auth.exploreDemoHint')}</div>
                     </div>
                   </div>
                   <Icon name="chevron_right" className="text-[20px] text-secondary transition-transform group-hover:translate-x-1" />
@@ -645,16 +682,16 @@ function AuthContent({
               <div className="mt-6 text-center text-caption text-on-surface-variant">
                 {tab === 'sign-in' ? (
                   <span>
-                    Pas encore de compte ?{' '}
-                    <button onClick={() => switchTab('sign-up')} className="font-bold text-primary hover:underline">
-                      Créer un compte gratuit
+                    {tr('auth.noAccount')}{' '}
+                    <button type="button" onClick={() => switchTab('sign-up')} className="font-bold text-primary hover:underline">
+                      {tr('auth.createFree')}
                     </button>
                   </span>
                 ) : (
                   <span>
-                    Vous avez déjà un compte ?{' '}
-                    <button onClick={() => switchTab('sign-in')} className="font-bold text-primary hover:underline">
-                      Se connecter
+                    {tr('auth.hasAccount')}{' '}
+                    <button type="button" onClick={() => switchTab('sign-in')} className="font-bold text-primary hover:underline">
+                      {tr('auth.signInLink')}
                     </button>
                   </span>
                 )}
@@ -665,7 +702,7 @@ function AuthContent({
 
         {/* Footer info */}
         <div className="text-center text-caption text-on-surface-variant/80">
-          MonCheck Bénin · Guide d'information et d'éducation juridique & financière.
+          {tr('auth.footerInfo')}
         </div>
       </div>
     </div>
@@ -676,7 +713,6 @@ function ClerkAuthForm(props) {
   const { isLoaded: isSignInLoaded, signIn, setActive: setSignInActive } = useSignIn()
   const { isLoaded: isSignUpLoaded, signUp, setActive: setSignUpActive } = useSignUp()
   const clerkLoaded = Boolean(isSignInLoaded && isSignUpLoaded)
-  const setActive = setSignInActive || setSignUpActive
 
   return (
     <AuthContent
@@ -684,13 +720,14 @@ function ClerkAuthForm(props) {
       clerkLoaded={clerkLoaded}
       signIn={signIn}
       signUp={signUp}
-      setActive={setActive}
+      setSignInActive={setSignInActive}
+      setSignUpActive={setSignUpActive}
     />
   )
 }
 
 function DirectAuthForm(props) {
-  return <AuthContent {...props} clerkLoaded={false} signIn={null} signUp={null} setActive={null} />
+  return <AuthContent {...props} clerkLoaded={false} signIn={null} signUp={null} setSignInActive={null} setSignUpActive={null} />
 }
 
 export default function AuthScreen(props) {
