@@ -221,7 +221,7 @@ function AuthContent({
                 <Icon name="gavel" className="text-[22px]" />
               </div>
               <div>
-                <span className="text-[20px] font-bold tracking-tight text-white">Knowly</span>
+                <span className="text-[20px] font-bold tracking-tight text-white">MonCheck</span>
                 <span className="block text-[11px] font-medium tracking-wide text-white/60">Guide juridique & financier · Bénin</span>
               </div>
             </div>
@@ -254,7 +254,7 @@ function AuthContent({
               Vos droits expliqués en <span className="text-secondary italic">clair</span>. Votre argent en ordre.
             </h1>
             <p className="mt-3 text-body-md leading-relaxed text-white/75">
-              Rejoignez les citoyens, entrepreneurs et salariés qui utilisent Knowly pour décrypter les lois béninoises et développer leur épargne.
+              Rejoignez les citoyens, entrepreneurs et salariés qui utilisent MonCheck pour décrypter les lois béninoises et développer leur épargne.
             </p>
           </div>
 
@@ -371,8 +371,8 @@ function AuthContent({
               {verifying
                 ? 'Vérifiez votre adresse email'
                 : tab === 'sign-in'
-                ? 'Bienvenue sur Knowly'
-                : 'Rejoignez Knowly gratuitement'}
+                ? 'Bienvenue sur MonCheck'
+                : 'Rejoignez MonCheck gratuitement'}
             </h2>
             <p className="mt-1.5 text-body-md text-on-surface-variant">
               {verifying
@@ -597,7 +597,7 @@ function AuthContent({
                 ) : (
                   <div className="text-caption leading-relaxed text-on-surface-variant pt-1">
                     En créant un compte, vous acceptez le{' '}
-                    <span className="font-semibold text-on-surface">guide citoyen et la charte de confidentialité</span> de Knowly.
+                    <span className="font-semibold text-on-surface">guide citoyen et la charte de confidentialité</span> de MonCheck.
                   </div>
                 )}
 
@@ -614,7 +614,7 @@ function AuthContent({
                     </>
                   ) : (
                     <>
-                      <span>{tab === 'sign-in' ? 'Se connecter à Knowly' : 'Créer mon compte gratuit'}</span>
+                      <span>{tab === 'sign-in' ? 'Se connecter à MonCheck' : 'Créer mon compte gratuit'}</span>
                       <Icon name="arrow_forward" className="text-[18px]" />
                     </>
                   )}
@@ -665,7 +665,7 @@ function AuthContent({
 
         {/* Footer info */}
         <div className="text-center text-caption text-on-surface-variant/80">
-          Knowly Bénin · Guide d'information et d'éducation juridique & financière.
+          MonCheck Bénin · Guide d'information et d'éducation juridique & financière.
         </div>
       </div>
     </div>

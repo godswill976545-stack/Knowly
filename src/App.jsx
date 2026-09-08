@@ -1141,7 +1141,7 @@ export default function App() {
     <div className="flex min-h-screen flex-col md:flex-row">
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-outline-variant/60 bg-white/90 px-4 backdrop-blur-md md:hidden">
         <div>
-          <div className="text-[18px] font-bold tracking-tight text-on-surface">Knowly</div>
+          <div className="text-[18px] font-bold tracking-tight text-on-surface">MonCheck</div>
           <div className="text-caption leading-none text-on-surface-variant">{t('app.tagline')}</div>
         </div>
         <div className="flex items-center gap-3 text-on-surface-variant">
@@ -1154,7 +1154,7 @@ export default function App() {
         <div className="mb-8 px-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white"><Icon name="gavel" className="text-[16px]" /></div>
-            <span className="text-[18px] font-bold tracking-tight text-on-surface">Knowly</span>
+            <span className="text-[18px] font-bold tracking-tight text-on-surface">MonCheck</span>
           </div>
           <div className="mt-1 text-caption text-on-surface-variant">{t('app.tagline')}</div>
         </div>
@@ -1206,7 +1206,7 @@ export default function App() {
             </>
           )}
           <footer className="border-t border-outline-variant/60 pt-6 text-center">
-            <div className="text-label-md font-semibold text-on-surface">Knowly</div>
+            <div className="text-label-md font-semibold text-on-surface">MonCheck</div>
             <p className="mx-auto mt-1 max-w-[48ch] text-caption leading-relaxed text-on-surface-variant">{t('footer.safety')}</p>
           </footer>
         </div>

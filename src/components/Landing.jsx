@@ -14,7 +14,7 @@ function LandingNav({ onSignIn }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
             <Icon name="gavel" className="text-[18px]" />
           </div>
-          <span className="text-[17px] font-bold tracking-tight text-on-surface">Knowly</span>
+          <span className="text-[17px] font-bold tracking-tight text-on-surface">MonCheck</span>
           <span className="hidden text-caption text-outline md:inline">Guide juridique & financier — Bénin</span>
         </div>
         <div className="hidden items-center gap-6 lg:flex">
@@ -30,7 +30,7 @@ function LandingNav({ onSignIn }) {
             href="#/sign-in"
             className="btn-duo btn-duo--dark px-5 py-2.5 text-label-md"
           >
-            Ouvrir Knowly
+            Ouvrir MonCheck
           </a>
         ) : (
           <a
@@ -38,7 +38,7 @@ function LandingNav({ onSignIn }) {
             onClick={(e) => { e.preventDefault(); onSignIn?.() }}
             className="btn-duo btn-duo--dark px-5 py-2.5 text-label-md"
           >
-            Ouvrir Knowly
+            Ouvrir MonCheck
           </a>
         )}
       </div>
@@ -193,7 +193,7 @@ function Hero({ onSignIn }) {
                   <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] shadow-[0_1px_2px_rgba(0,0,0,0.15)]" />
                 </div>
                 <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-caption font-semibold tracking-wide text-on-surface-variant shadow-sm border border-outline-variant/60">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> knowly.bj — Aperçu LIVE
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> moncheck.bj — Aperçu LIVE
                 </span>
                 <Icon name="more_horiz" className="text-outline" />
               </div>
@@ -336,7 +336,7 @@ function BentoFeatures() {
           </div>
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-low p-6 md:col-span-7">
-          <img src="https://picsum.photos/seed/knowly-benin-market/800/400" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.06]" />
+          <img src="https://picsum.photos/seed/moncheck-benin-market/800/400" alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.06]" />
           <div className="relative">
             <div className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wide text-secondary"><Icon name="notifications" className="text-[16px]" /> Alertes qui respectent votre temps</div>
             <h3 className="mt-2 text-headline-md text-on-surface">Zéro bruit. Que le signal.</h3>
@@ -355,7 +355,7 @@ function BentoFeatures() {
 
 function HowItWorks() {
   const steps = [
-    { n: '01', title: 'Choisissez vos sujets', desc: 'Impôts, emploi, logement, business... Knowly filtre le bruit.', icon: 'tune' },
+    { n: '01', title: 'Choisissez vos sujets', desc: 'Impôts, emploi, logement, business... MonCheck filtre le bruit.', icon: 'tune' },
     { n: '02', title: 'Recevez l’essentiel', desc: 'Une carte par changement, avec source et date d’effet.', icon: 'inbox' },
     { n: '03', title: 'Comprenez en 30 secondes', desc: 'L’IA explique, cite l’article, liste les vérifications.', icon: 'auto_awesome' },
   ]
@@ -389,7 +389,7 @@ function Trust() {
       <div className="flex flex-col gap-6 rounded-2xl border border-outline-variant bg-primary p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-[52ch]">
           <h3 className="text-headline-md">Sécurité juridique : guide, pas avis.</h3>
-          <p className="mt-2 text-body-md leading-relaxed text-white/75">Knowly explique. Pour une décision importante, vérifiez auprès de l'autorité compétente. Aucune donnée vendue.</p>
+          <p className="mt-2 text-body-md leading-relaxed text-white/75">MonCheck explique. Pour une décision importante, vérifiez auprès de l'autorité compétente. Aucune donnée vendue.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-label-md font-semibold text-primary"><Icon name="shield" className="text-[16px]" /> Chiffrement</span>
@@ -405,7 +405,7 @@ function FinalCTA({ onSignIn }) {
     <section className="mx-auto max-w-[1280px] px-4 pb-12 md:px-10">
       <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-8 text-center md:p-12">
         <h2 className="mx-auto max-w-[18ch] text-[30px] font-bold leading-none tracking-[-0.02em] text-on-surface md:text-[40px]">Prêt à y voir clair ?</h2>
-        <p className="mx-auto mt-3 max-w-[48ch] text-body-md text-on-surface-variant">Rejoignez Knowly. Vos alertes, votre budget et vos explications — au même endroit.</p>
+        <p className="mx-auto mt-3 max-w-[48ch] text-body-md text-on-surface-variant">Rejoignez MonCheck. Vos alertes, votre budget et vos explications — au même endroit.</p>
         <div className="mt-6 flex justify-center">
           <a href="#/sign-in" className="btn-duo btn-duo--primary px-7 py-3.5 text-label-md shadow-sm">
             Créer mon compte <Icon name="arrow_forward" className="text-[18px]" />
@@ -429,8 +429,8 @@ export default function Landing({ onSignIn }) {
       <FinalCTA onSignIn={onSignIn} />
       <footer className="border-t border-outline-variant bg-white">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-2 px-4 py-6 text-caption text-on-surface-variant md:flex-row md:items-center md:justify-between md:px-10">
-          <span className="font-semibold text-on-surface">Knowly — Know your rights. Grow your money.</span>
-          <span>© 2026 Knowly · Bénin · Ceci est un guide, pas un avis juridique.</span>
+          <span className="font-semibold text-on-surface">MonCheck — Know your rights. Grow your money.</span>
+          <span>© 2026 MonCheck · Bénin · Ceci est un guide, pas un avis juridique.</span>
         </div>
       </footer>
     </div>

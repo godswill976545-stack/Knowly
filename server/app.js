@@ -101,7 +101,7 @@ function buildSystemPrompt(lawBlock, hasLaws) {
 ${lawBlock}`
     : `No specific law excerpts matched this question — answer from general knowledge. Leave sources empty.`
 
-  return `You are Knowly — Benin's trusted guide for BOTH everyday law AND personal finance.
+  return `You are MonCheck — Benin's trusted guide for BOTH everyday law AND personal finance.
 
 You help with:
 - Benin laws, taxes, regulations, contracts, rights, permits
@@ -486,7 +486,7 @@ async function fetchAndIngestNews() {
   let inserted = 0
   for (const src of sources) {
     try {
-      const res = await fetch(src.url, { headers: { 'User-Agent': 'KnowlyBot/1.0' }, signal: AbortSignal.timeout(10000) })
+      const res = await fetch(src.url, { headers: { 'User-Agent': 'MonCheckBot/1.0' }, signal: AbortSignal.timeout(10000) })
       if (!res.ok) continue
       const html = await res.text()
       const $ = cheerio.load(html)
@@ -517,7 +517,7 @@ async function fetchAndIngestNews() {
         let articleTitle = title
 
         try {
-          const artRes = await fetch(href, { headers: { 'User-Agent': 'KnowlyBot/1.0' }, signal: AbortSignal.timeout(8000) })
+          const artRes = await fetch(href, { headers: { 'User-Agent': 'MonCheckBot/1.0' }, signal: AbortSignal.timeout(8000) })
           if (artRes.ok) {
             const artHtml = await artRes.text()
             const structured = extractStructuredArticle(artHtml, title)
@@ -587,7 +587,7 @@ async function extractTextFromFile(file) {
   }
 
   if (type.startsWith('image/') || name.match(/\.(png|jpg|jpeg|webp)$/i)) {
-    const tmp = path.join(os.tmpdir(), `knowly-upload-${Date.now()}${path.extname(name) || '.png'}`)
+    const tmp = path.join(os.tmpdir(), `moncheck-upload-${Date.now()}${path.extname(name) || '.png'}`)
     writeFileSync(tmp, buf)
     try {
       const text = execFileSync('node', [path.join(process.cwd(), 'db', 'ocr-worker.js'), tmp], { timeout: 60000, encoding: 'utf8' })
