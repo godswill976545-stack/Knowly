@@ -34,61 +34,38 @@ export async function GET(request) {
       ],
     })
 
-    // Try to get handshake response which contains Set-Cookie for session.
-    // In newer Clerk versions this handles the handshake/interstitial correctly.
-    let handshakeRes = null
-    try {
-      if (typeof requestState.toResponse === 'function') {
-        handshakeRes = requestState.toResponse()
-      }
-    } catch (e) {
-      console.warn('toResponse failed:', e.message)
-    }
-
-    if (handshakeRes && handshakeRes.headers) {
-      const headers = new Headers()
-      headers.set('Location', origin + '/')
-
-      // Forward all Set-Cookie headers (Clerk may set __session, __client_uat, __clerk_db_jwt etc.)
+    // Clerk's authenticateRequest returns a RequestState with `headers` containing
+    // handshake cookies when status is 'handshake'. `toResponse()` does NOT exist
+    // on this SDK version – we use `requestState.headers` directly.
+    const stateHeaders = requestState.headers
+    if (stateHeaders) {
       let cookies = []
-      if (typeof handshakeRes.headers.getSetCookie === 'function') {
-        cookies = handshakeRes.headers.getSetCookie()
+      if (typeof stateHeaders.getSetCookie === 'function') {
+        cookies = stateHeaders.getSetCookie()
       } else {
-        // Fallback: try to collect via iteration
         const collected = []
         try {
-          handshakeRes.headers.forEach((value, key) => {
+          stateHeaders.forEach((value, key) => {
             if (key.toLowerCase() === 'set-cookie') collected.push(value)
           })
         } catch {}
         if (collected.length) cookies = collected
         else {
-          const single = handshakeRes.headers.get('set-cookie')
+          const single = stateHeaders.get('set-cookie')
           if (single) cookies = [single]
         }
       }
-
-      cookies.forEach((c) => headers.append('Set-Cookie', c))
-
-      // If we have cookies, redirect with them. This ensures session is persisted.
       if (cookies.length > 0) {
+        const headers = new Headers()
+        headers.set('Location', origin + '/')
+        cookies.forEach((c) => headers.append('Set-Cookie', c))
+        // Preserve other important headers if present
         return new Response(null, { status: 302, headers })
       }
-
-      // If handshakeRes is already a redirect (e.g. handshake -> interstitial), forward its location
-      if (handshakeRes.status >= 300 && handshakeRes.status < 400) {
-        const loc = handshakeRes.headers.get('location') || origin + '/'
-        headers.set('Location', loc)
-        return new Response(null, { status: handshakeRes.status, headers })
-      }
     }
 
-    // If directly signed-in (no handshake needed) or handshake without cookies, just redirect home.
-    // Clerk JS will pick up session via client-side handshake as fallback.
-    if (requestState.status === 'signed-in' || requestState.status === 'handshake') {
-      return Response.redirect(origin + '/', 302)
-    }
-
+    // For handshake without cookies (rare) or signed-in, just redirect home.
+    // Clerk JS will finalize session client-side.
     return Response.redirect(origin + '/', 302)
   } catch (err) {
     console.error('SSO callback error:', err.message, err.stack)

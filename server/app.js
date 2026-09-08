@@ -460,14 +460,14 @@ app.post('/explain', async (c) => {
         throw new Error('Model returned empty explanation')
       }
     } catch (err) {
-      console.error('Zen call failed:', err.message)
-      // User-friendly message, keep 502 but with clear remediation
-      const friendly = err.message.includes('JSON') || err.message.includes('Empty response')
-        ? 'Le service IA a répondu dans un format inattendu. Réessayez dans un instant.'
-        : err.message.includes('Zen API error')
-          ? 'Le service IA est temporairement indisponible. Réessayez dans quelques secondes.'
-          : err.message
-      return c.json({ error: friendly, _debug: err.message.slice(0, 300) }, 502)
+      console.error('Zen call failed, using fallback:', err.message)
+      // If Zen fails (e.g. free tier restriction, quota, network), return a
+      // useful fallback instead of 502 so the chat still works in production.
+      explanation = {
+        ...FALLBACK_EXPLANATION,
+        simple_terms: FALLBACK_EXPLANATION.simple_terms + ' (Mode hors-ligne – le service IA est temporairement indisponible.)',
+      }
+      usedFallback = true
     }
   }
 
@@ -651,8 +651,11 @@ app.post('/explain/upload', async (c) => {
       disclaimer: String(parsed.disclaimer ?? 'Ceci est une explication, pas un avis juridique. Vérifiez les décisions importantes auprès de l’autorité compétente.'),
     }
   } catch (err) {
-    const friendly = err.message.includes('JSON') ? 'Le service IA a répondu dans un format inattendu. Réessayez.' : err.message
-    return c.json({ error: friendly }, 502)
+    console.error('Upload Zen failed, using fallback:', err.message)
+    explanation = {
+      ...FALLBACK_EXPLANATION,
+      simple_terms: FALLBACK_EXPLANATION.simple_terms + ' (Mode hors-ligne – document lu mais IA indisponible.)',
+    }
   }
 
   const encoder = new TextEncoder()

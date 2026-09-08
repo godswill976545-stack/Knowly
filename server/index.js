@@ -25,34 +25,28 @@ async function handleSsoCallback(request) {
         'http://127.0.0.1:5173',
       ],
     })
-    let handshakeRes = null
-    try {
-      if (typeof requestState.toResponse === 'function') handshakeRes = requestState.toResponse()
-    } catch {}
-    if (handshakeRes && handshakeRes.headers) {
-      const headers = new Headers()
-      headers.set('Location', origin + '/')
+    const stateHeaders = requestState.headers
+    if (stateHeaders) {
       let cookies = []
-      if (typeof handshakeRes.headers.getSetCookie === 'function') cookies = handshakeRes.headers.getSetCookie()
+      if (typeof stateHeaders.getSetCookie === 'function') cookies = stateHeaders.getSetCookie()
       else {
         const collected = []
         try {
-          handshakeRes.headers.forEach((value, key) => {
+          stateHeaders.forEach((value, key) => {
             if (key.toLowerCase() === 'set-cookie') collected.push(value)
           })
         } catch {}
         if (collected.length) cookies = collected
         else {
-          const single = handshakeRes.headers.get('set-cookie')
+          const single = stateHeaders.get('set-cookie')
           if (single) cookies = [single]
         }
       }
-      cookies.forEach((c) => headers.append('Set-Cookie', c))
-      if (cookies.length > 0) return new Response(null, { status: 302, headers })
-      if (handshakeRes.status >= 300 && handshakeRes.status < 400) {
-        const loc = handshakeRes.headers.get('location') || origin + '/'
-        headers.set('Location', loc)
-        return new Response(null, { status: handshakeRes.status, headers })
+      if (cookies.length > 0) {
+        const headers = new Headers()
+        headers.set('Location', origin + '/')
+        cookies.forEach((c) => headers.append('Set-Cookie', c))
+        return new Response(null, { status: 302, headers })
       }
     }
     return Response.redirect(origin + '/', 302)
