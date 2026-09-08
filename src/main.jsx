@@ -21,7 +21,13 @@ const clerkAppearance = {
 function Root() {
   if (CLERK_KEY) {
     return (
-      <ClerkProvider publishableKey={CLERK_KEY} appearance={clerkAppearance}>
+      <ClerkProvider
+        publishableKey={CLERK_KEY}
+        appearance={clerkAppearance}
+        signInFallbackRedirectUrl="/"
+        signUpFallbackRedirectUrl="/"
+        afterSignOutUrl="/"
+      >
         <App />
       </ClerkProvider>
     )

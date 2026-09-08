@@ -4,7 +4,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/sso-callback", "destination": "/api/sso-callback" }
+    { "source": "/api/(.*)", "destination": "/api/[[...route]]" }
   ],
   "crons": [{ "path": "/api/cron/fetch-news", "schedule": "0 6 * * *" }]
 }

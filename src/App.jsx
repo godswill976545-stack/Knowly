@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
+import { AuthenticateWithRedirectCallback, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { api, formatDate } from './api.js'
 import { LANGUAGES, translate } from './i18n/index.js'
@@ -8,6 +8,35 @@ import AuthScreen from './components/Auth.jsx'
 import ArticleRenderer from './components/ArticleRenderer.jsx'
 
 const CLERK_ACTIVE = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
+
+// After a successful sign-in/up we must leave the `#/sign-in` (or `#/sign-up`)
+// hash. Using history.replaceState avoids leaving a trailing `#` behind and
+// lets <SignedIn> take over and render the app shell instead of the landing.
+function clearAuthHash() {
+  try {
+    if (window.location.hash) {
+      window.history.pushState(null, '', window.location.pathname + window.location.search)
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    }
+  } catch {
+    window.location.hash = ''
+  }
+}
+
+function SsoCallbackScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <div className="flex flex-col items-center gap-3">
+        <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <p className="text-body-md text-on-surface-variant">Finalisation de la connexion…</p>
+      </div>
+      <AuthenticateWithRedirectCallback
+        signInFallbackRedirectUrl="/"
+        signUpFallbackRedirectUrl="/"
+      />
+    </div>
+  )
+}
 
 function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash)
@@ -1140,7 +1169,7 @@ export default function App() {
 
   const handleExitGuest = () => {
     setGuestMode(false)
-    window.location.hash = ''
+    clearAuthHash()
   }
 
   const shell = (
@@ -1240,6 +1269,14 @@ export default function App() {
   )
 
   if (!CLERK_ACTIVE || guestMode) return shell
+
+  // Clerk OAuth redirects back to `/sso-callback` (see Auth.jsx handleOAuth).
+  // This must render Clerk's callback component so the session is finalized
+  // client-side. Previously vercel.json rewrote this path to the API, which
+  // just 302'd to `/` without a session — landing page instead of the app.
+  if (typeof window !== 'undefined' && window.location.pathname === '/sso-callback') {
+    return <SsoCallbackScreen />
+  }
 
   return (
     <>

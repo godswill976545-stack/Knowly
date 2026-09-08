@@ -9,10 +9,6 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: false,
       },
-      '/sso-callback': {
-        target: 'http://localhost:3001',
-        changeOrigin: false,
-      },
     },
   },
 })

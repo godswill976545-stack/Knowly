@@ -5,6 +5,27 @@ import { LANGUAGES } from '../i18n/index.js'
 
 const CLERK_ACTIVE = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
 
+// Clear hash for guest/demo flows (soft, no reload)
+function clearAuthHash() {
+  try {
+    window.history.pushState(null, '', window.location.pathname + window.location.search)
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+  } catch {
+    window.location.hash = ''
+  }
+}
+
+// Hard redirect to home – forces Clerk to re-hydrate session from cookies.
+// Use after successful Clerk sign-in / sign-up so the app shell is rendered
+// even if SignedIn takes a moment to become true.
+function redirectToHome() {
+  // Clear hash first then do hard navigation to /
+  try {
+    window.history.pushState(null, '', window.location.pathname + window.location.search)
+  } catch {}
+  window.location.replace(window.location.origin + '/')
+}
+
 const Icon = ({ name, className = '', fill = false }) => (
   <span className={`material-symbols-outlined ${fill ? 'ms-fill' : ''} ${className}`}>{name}</span>
 )
@@ -114,6 +135,9 @@ function AuthContent({
       if (clerkLoaded && (signIn || signUp)) {
         const target = tab === 'sign-in' ? signIn : signUp
         if (!target) throw new Error('Clerk not ready')
+        // `/sso-callback` is rendered by App.jsx <SsoCallbackScreen /> which
+        // mounts AuthenticateWithRedirectCallback to finalize the session,
+        // then falls back to `/` (the app shell for signed-in users).
         await target.authenticateWithRedirect({
           strategy: provider,
           redirectUrl: window.location.origin + '/sso-callback',
@@ -121,7 +145,7 @@ function AuthContent({
         })
       } else {
         onGuestLogin?.()
-        window.location.hash = ''
+        clearAuthHash()
       }
     } catch (err) {
       setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorSocial'))
@@ -146,21 +170,14 @@ function AuthContent({
         })
         if (result.status === 'complete') {
           await setSignInActive({ session: result.createdSessionId })
-          // Clear hash to trigger SignedIn view; force navigation to root
-          window.location.hash = ''
-          // Small delay to ensure Clerk propagates, then go to home
-          setTimeout(() => {
-            if (window.location.hash !== '') window.location.hash = ''
-            // Ensure we are at root path
-            if (window.location.pathname !== '/') window.location.pathname = '/'
-          }, 50)
+          redirectToHome()
         } else {
           // Handle case where sign-in needs second factor or email verification
           setError(tr('auth.errorActionRequired', { status: result.status }) || `Action requise. Statut : ${result.status}`)
         }
       } else {
         onGuestLogin?.()
-        window.location.hash = ''
+        clearAuthHash()
       }
     } catch (err) {
       setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorInvalidCredentials'))
@@ -196,7 +213,7 @@ function AuthContent({
         setSuccess(tr('auth.codeSent', { email }) || `Un code de validation a été envoyé à ${email}`)
       } else {
         onGuestLogin?.()
-        window.location.hash = ''
+        clearAuthHash()
       }
     } catch (err) {
       setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorCreateAccount'))
@@ -215,17 +232,13 @@ function AuthContent({
         const completeSignUp = await signUp.attemptEmailAddressVerification({ code: verificationCode })
         if (completeSignUp.status === 'complete') {
           await setSignUpActive({ session: completeSignUp.createdSessionId })
-          window.location.hash = ''
-          setTimeout(() => {
-            if (window.location.hash !== '') window.location.hash = ''
-            if (window.location.pathname !== '/') window.location.pathname = '/'
-          }, 50)
+          redirectToHome()
         } else {
           setError(tr('auth.errorVerificationIncomplete', { status: completeSignUp.status }) || 'Vérification incomplète. Statut : ' + completeSignUp.status)
         }
       } else {
         onGuestLogin?.()
-        window.location.hash = ''
+        clearAuthHash()
       }
     } catch (err) {
       setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || tr('auth.errorWrongCode'))
@@ -236,7 +249,7 @@ function AuthContent({
 
   const handleDemoAccess = () => {
     onGuestLogin?.()
-    window.location.hash = ''
+    clearAuthHash()
   }
 
   return (
@@ -350,7 +363,7 @@ function AuthContent({
         {/* Top Header / Back Navigation */}
         <div className="flex items-center justify-between">
           <button
-            onClick={() => (window.location.hash = '')}
+            onClick={clearAuthHash}
             className="btn-duo btn-duo--white group px-4 py-2 text-label-md"
           >
             <Icon name="arrow_back" className="text-[16px] transition-transform group-hover:-translate-x-0.5" />
