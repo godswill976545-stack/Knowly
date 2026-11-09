@@ -1,46 +1,18 @@
 {
   "name": "moncheck",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "2.0.0",
   "scripts": {
-    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:web": "vite",
-    "dev:api": "node server/index.js",
-    "db:migrate": "node db/migrate.js",
-    "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "node supabase/seed/seed-alerts.mjs"
   },
   "dependencies": {
-    "@clerk/backend": "^3.17.0",
-    "@clerk/clerk-react": "^5.61.9",
-    "@designcodeio/threeui": "^1.2.0",
-    "@hono/node-server": "^2.1.1",
-    "@napi-rs/canvas": "^1.0.8",
-    "@neondatabase/serverless": "^1.1.0",
-    "@xenova/transformers": "^2.17.2",
-    "cheerio": "^1.2.0",
-    "dotenv": "^17.4.2",
-    "hono": "^4.13.4",
-    "motion": "^13.1.1",
-    "pdfjs-dist": "^5.4.149",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "tesseract.js": "^5.1.1"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.1.0",
-    "autoprefixer": "^10.5.4",
-    "concurrently": "^10.0.5",
-    "oxlint": "^1.79.0",
-    "postcss": "^8.5.26",
-    "tailwindcss": "^3.4.17",
-    "vite": "^8.2.2"
-  },
-  "overrides": {
-    "shell-quote": "^1.10.1"
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

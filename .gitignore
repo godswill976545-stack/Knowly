@@ -1,34 +1,9 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Environment and secrets
+node_modules/
+.next/
+out/
 .env
-.env.*
-!.env.example
-vite-dev.log
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
+.env.local
+.env*.local
 .vercel
-fra.traineddata
-.env*
+*.log
+.DS_Store

@@ -1,69 +1,99 @@
-# MonCheck — know your rights, grow your money
+# MonCheck — alertes officielles du Bénin, en français simple
 
-MonCheck turns Benin's laws and government news into plain-language explanations, and pairs
-that with a simple personal-finance tracker (income, expenses, savings goals) in CFA.
-UI available in French, English, Yoruba, and Fon (draft).
+MonCheck envoie les alertes réglementaires du Bénin sur le téléphone, explique
+chacune en français simple, et aide à suivre son budget en FCFA. Pensé pour les
+téléphones Android d'entrée de gamme avec une connexion lente et coûteuse :
+petit, léger, français d'abord, connexion par numéro de téléphone.
 
-## Stack
+Stack : **Next.js (App Router) sur Vercel + Supabase** (Auth + Postgres + RLS).
+Thème crème original conservé (#fbf5e6, vert kente #18803d).
 
-- **Frontend**: React 19 + Vite + Tailwind, motion animations, hash-based tabs (`src/`)
-- **Backend**: one Hono app in `server/app.js`
-  - local dev: `@hono/node-server` on port 3001
-  - production: Vercel serverless via the `api/[[...route]].js` catch-all
-- **Database**: Neon Postgres (`@neondatabase/serverless`), schema in `db/*.sql`
-- **Auth**: Clerk (email/password + Google OAuth); guests share a seeded demo user
-- **AI**: Nous Research free models primary, Google Gemini key-pool fallback, with
-  defensive JSON parsing and a graceful offline fallback (`server/app.js`)
+## Lancer en local (mode démo)
 
-## How the pieces fit
-
-1. **Law library (RAG)** — `db/ingest.js` processes the Benin law PDFs in `laws/`:
-   pdfjs text extraction with Tesseract OCR fallback (`db/ocr-worker.js`, French),
-   chunking by `Article N°`, embeddings via `Xenova/multilingual-e5-small`, stored in
-   `law_chunks` (pgvector + French tsvector). `/api/explain` retrieves relevant chunks
-   (full-text search with synonym expansion) and grounds the AI answer in them.
-2. **AI explainer** — `POST /api/explain` (text) and `POST /api/explain/upload`
-   (PDF/image, OCR'd then streamed back word-by-word over SSE). Answers are strictly
-   shaped JSON: plain explanation, why it matters, money link, checks, law sources,
-   disclaimer.
-3. **News/regs feed** — a daily Vercel cron (`/api/cron/fetch-news`, 06:00 UTC) scrapes
-   the official sources in `news_sources` (gouv.bj, sgg.gouv.bj, …) and stores articles
-   as **`unverified`**. Publish them with `scripts/approve-regulations.mjs` — users only
-   ever see `verified` rows.
-4. **Money** — financial profile, goals, daily logs (`/api/financial-profile`,
-   `/api/goals`, `/api/daily-log`), voice entry via Web Speech API, and a rule-based
-   advice engine (`src/lib/adviceEngine.js`).
-
-## Commands
+Sans rien configurer, l'application tourne en **mode démo** : aucune vraie
+connexion, données stockées dans le navigateur (localStorage), alertes de
+démonstration incluses.
 
 ```bash
 npm install
-npm run db:migrate      # apply db/schema.sql + seed.sql + vector-schema.sql
-npm run dev             # API on :3001 + Vite dev server (proxies /api)
-npm run build           # production build to dist/
-npm run lint            # oxlint
-
-node db/ingest.js                  # ingest law PDFs (skips already-ingested)
-node db/ingest.js --force          # re-ingest everything
-node db/ingest.js --file=loi-2016-33.pdf --max-pages=5
-
-node scripts/approve-regulations.mjs          # list scraped, unverified rows
-node scripts/approve-regulations.mjs approve 42
-node scripts/approve-regulations.mjs approve-all
+npm run dev        # http://localhost:3000
 ```
 
-## Environment
+## Mise en place Supabase (production)
 
-Copy `.env.example` to `.env` and fill in: `DATABASE_URL`, `CLERK_SECRET_KEY` +
-`VITE_CLERK_PUBLISHABLE_KEY`, `NOUS_API_KEY`, and optionally `GOOGLE_API_KEYS` and
-`CRON_SECRET`. Without `CLERK_SECRET_KEY` the API rejects presented session tokens
-(guest/demo mode still works). In production also set `EXPOSE_PROVIDER_ERRORS=1`
-temporarily to debug AI provider outages.
+1. **Créer le projet** sur [supabase.com](https://supabase.com).
+2. **Schéma** : ouvrir *SQL Editor* et exécuter
+   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)
+   (profiles + trigger d'inscription, alerts, alert_explanations,
+   budget_entries, question_logs, RLS sur toutes les tables).
+3. **SMS (connexion par téléphone)** : Dashboard → Authentication → Providers
+   → Phone, puis configurer **Twilio** (Account SID, Auth Token, Message
+   Service SID). Les SMS partent de `signInWithOtp` côté client ; rien d'autre
+   à coder.
+4. **WhatsApp OTP (optionnel)** : configurer un *WhatsApp sender* dans Twilio,
+   puis mettre `NEXT_PUBLIC_WHATSAPP_OTP_ENABLED=1` pour afficher
+   « Recevoir par WhatsApp ».
+5. **E-mail (connexion de secours)** : Authentication → Email Templates, garder
+   `{{ .Token }}` dans le modèle (« Magic Link » par défaut) pour que le code à
+   6 chiffres soit envoyé, pas seulement le lien.
+6. **Variables d'environnement** (voir `.env.example`) :
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (routes serveur : cache d'explications,
+     journal des questions, publication admin)
+   - `NEXT_PUBLIC_APP_URL` (ex. `https://moncheck.vercel.app`, pour les
+     aperçus WhatsApp)
+   - `GOOGLE_API_KEY` (optionnel : explications IA ; sans clé, un texte simple
+     déjà stocké sur l'alerte est utilisé)
+7. **Alertes de départ** : `npm run seed` (utilise `SUPABASE_URL` et
+   `SUPABASE_SERVICE_ROLE_KEY`). Elles arrivent en `draft` ou `published` —
+   **relisez et vérifiez chaque texte et chaque lien avant de publier**, ce
+   sont des contenus d'exemple.
+8. **Premier administrateur** : `update public.profiles set is_admin = true
+   where phone = '+22901…';` — l'admin publie les brouillons sur `/admin`.
 
-## Deployment (Vercel)
+### Numéros de téléphone (plan à 10 chiffres du Bénin)
 
-- Build: `npm run build`, output `dist/`; `/api/*` rewrites to the serverless function.
-- Cron: `vercel.json` schedules `/api/cron/fetch-news` daily — set `CRON_SECRET` in the
-  Vercel project so the endpoint only accepts Vercel's authenticated calls.
-- `vercel.json` also sets baseline security headers (nosniff, referrer policy,
-  frame denial, permissions policy).
+Depuis le 30/11/2024 (ARCEP), les numéros béninois sont à 10 chiffres : `01`
++ l'ancien numéro à 8 chiffres. L'application accepte `97 00 00 01`,
+`01 97 00 00 01` ou `+229 01 97 00 00 01` et envoie toujours l'E.164
+`+22901XXXXXXXX` attendu par Twilio. Les fixes (01 2x / 01 3x) sont refusés car
+ils ne reçoivent pas de SMS. Notes Twilio : l'envoi vers le Bénin est
+unidirectionnel (idéal pour un code OTP) et utilisez un **sender ID
+alphanumérique** pré-enregistré pour les destinations MTN.
+
+## Déploiement sur Vercel
+
+1. Déployer ce dossier (monorepo : régler *Root Directory* sur `moncheck/` ou
+   déployer ce dossier comme nouveau projet `moncheck`).
+2. Renseigner les variables d'environnement ci-dessus dans Vercel.
+3. Le framework Next.js est détecté automatiquement ; aucune config
+   supplémentaire n'est requise.
+
+## Fonctionnement
+
+| Page | Rôle |
+| --- | --- |
+| `/connexion` | seul point d'entrée : code SMS à 6 chiffres (défaut) ou e-mail (secours). Pas de mot de passe, pas de page d'inscription. |
+| `/accueil` | bonjour + reste du mois, 3 gros boutons (Alertes / Budget / Question), dernière alerte, navigation basse. |
+| `/alertes` | liste filtrée (Tout, Impôts, Banque et Mobile Money, Travail, Commerce) ; détail avec « Explique-moi simplement » (générée une fois, mise en cache), lecture à voix haute, partage WhatsApp. |
+| `/alerte/{id}` | page publique légère pour le partage WhatsApp (Open Graph propre), visible sans compte. |
+| `/budget` | revenus / dépenses / reste du mois, ajout en 3 tapes, 11 catégories béninoises, totaux par catégorie ; les ajouts hors ligne sont synchronisés au retour de la connexion. |
+| `/question` | réponses uniquement à partir des alertes officielles enregistrées, avec sources et limite par utilisateur (10/heure). |
+| `/aide` | compte, déconnexion, installation, fonctionnement hors ligne. |
+| `/admin` | relecture et publication des brouillons (administrateurs uniquement). |
+
+- **Hors ligne** : le service worker met l'application en cache, les
+  20 dernières alertes restent dans localStorage, bannière « Mode hors ligne ».
+- **Langues** : tout le texte est dans `src/lib/translations/fr.json` ;
+  `fon.json` et `yo.json` sont préparés (mêmes clés, vides) pour plus tard.
+- **Argent** : entiers (XOF sans décimales), affichage « 25 000 FCFA ».
+
+## Sécurité
+
+- RLS activée sur toutes les tables ; chaque utilisateur ne voit que sa propre
+  ligne (`profiles`, `budget_entries`). Les alertes publiées sont lisibles par
+  tous ; les brouillons uniquement par les administrateurs.
+- La clé de service reste côté serveur (`SUPABASE_SERVICE_ROLE_KEY`, jamais en
+  `NEXT_PUBLIC_*`).
+- `/api/ask` limite à 10 questions/heure/utilisateur et ne devine jamais sans
+  source.
