@@ -20,13 +20,15 @@ INSERT INTO goals (user_id, name, category, target_amount, current_amount)
 SELECT 1, 'New Laptop', 'Tech', 500000, 210000
 WHERE NOT EXISTS (SELECT 1 FROM goals WHERE user_id = 1 AND name = 'New Laptop');
 
-INSERT INTO regulations (title, summary, category, severity, source_name, published_date, effective_date)
+INSERT INTO regulations (title, summary, category, severity, type, enforcement_note, source_name, published_date, effective_date)
 SELECT * FROM (VALUES
   (
     'New Tax Rule for Small Businesses',
     'Changes to deductible expenses take effect for businesses with annual revenue under 10M CFA. Review how this impacts your current filings.',
     'Taxes',
     'critical',
+    'law',
+    'The DGI has announced stricter audits for small businesses. Non-compliance penalties have doubled.',
     'Direction Générale des Impôts',
     DATE '2026-08-20',
     'September 1, 2026'
@@ -36,6 +38,8 @@ SELECT * FROM (VALUES
     'Updated rules for fixed-term contracts and worker protections change notice periods and renewal limits.',
     'Employment',
     'standard',
+    'law',
+    'Labour inspectors are now conducting unannounced checks. Ensure all contracts are updated.',
     'Ministry of Labour',
     DATE '2026-08-18',
     'October 15, 2026'
@@ -45,9 +49,11 @@ SELECT * FROM (VALUES
     'A new registration window opens for small business support grants. Applications close at the end of November.',
     'Business',
     'info',
+    'news',
+    NULL,
     'Ministry of Commerce',
     DATE '2026-08-22',
     'Deadline November 30, 2026'
   )
-) AS new_rows (title, summary, category, severity, source_name, published_date, effective_date)
+) AS new_rows (title, summary, category, severity, type, enforcement_note, source_name, published_date, effective_date)
 WHERE NOT EXISTS (SELECT 1 FROM regulations WHERE title = new_rows.title);

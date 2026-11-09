@@ -31,3 +31,4 @@ vite-dev.log
 
 .vercel
 fra.traineddata
+.env*

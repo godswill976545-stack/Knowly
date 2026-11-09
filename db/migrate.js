@@ -22,7 +22,12 @@ async function runFile(path) {
 }
 
 const targets = process.argv.slice(2)
-const files = targets.length ? targets.map((t) => `./${t.replace(/^db\//, '')}`) : ['./schema.sql', './seed.sql', './vector-schema.sql']
+// add-clerk-id.sql: currentUserId() upserts users by clerk_id — a fresh env
+// without this column makes every signed-in request fail.
+// news-sources.sql: feeds the daily news cron.
+const files = targets.length
+  ? targets.map((t) => `./${t.replace(/^db\//, '')}`)
+  : ['./schema.sql', './add-clerk-id.sql', './seed.sql', './vector-schema.sql', './news-sources.sql']
 
 try {
   for (const file of files) {

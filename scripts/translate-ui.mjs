@@ -69,7 +69,7 @@ async function translateTarget(target) {
       try {
         translated = await translateBatch(target.name, batch)
         break
-      } catch (err) {
+      } catch {
         process.stdout.write(`x`)
         if (attempt === RETRIES) translated = null
         await new Promise((r) => setTimeout(r, 1500))

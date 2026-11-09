@@ -163,7 +163,9 @@ function finalizeChunks(rawChunks) {
     }
     let start = 0
     let part = 1
-    const total = Math.ceil(chunk.content.length / (WINDOW_CHARS - WINDOW_OVERLAP))
+    // Windows advance by stride (WINDOW_CHARS - WINDOW_OVERLAP) but the first
+    // window covers WINDOW_CHARS, so the part total must account for that.
+    const total = Math.ceil((chunk.content.length - WINDOW_OVERLAP) / (WINDOW_CHARS - WINDOW_OVERLAP))
     while (start < chunk.content.length) {
       const end = Math.min(start + WINDOW_CHARS, chunk.content.length)
       const slice = chunk.content.slice(start, end).trim()
@@ -186,8 +188,17 @@ async function embedAll(extractor, chunks) {
   const vectors = new Array(chunks.length)
   for (let i = 0; i < chunks.length; i += EMBED_BATCH) {
     const batch = chunks.slice(i, i + EMBED_BATCH).map((c) => 'passage: ' + c.content.replace(/\s+/g, ' ').slice(0, 2000))
-    const out = await extractor(batch, { pooling: 'mean', normalize: true })
-    const rows = out.tolist()
+    let rows = null
+    for (let attempt = 0; attempt < 2 && !rows; attempt++) {
+      try {
+        const out = await extractor(batch, { pooling: 'mean', normalize: true })
+        rows = out.tolist()
+      } catch (err) {
+        if (attempt === 1) throw err
+        log(`    embed batch ${i} failed (${err.message.slice(0, 60)}), retrying once`)
+        await new Promise((r) => setTimeout(r, 2000))
+      }
+    }
     for (let j = 0; j < rows.length; j++) {
       vectors[i + j] = rows[j]
     }
@@ -240,6 +251,9 @@ async function main() {
       continue
     }
 
+    // One bad PDF must not abort the whole run — mark it failed and continue.
+    let documentId = null
+    try {
     let docRow
     if (existing.length) {
       docRow = existing[0]
@@ -252,7 +266,7 @@ async function main() {
       )
       docRow = inserted[0]
     }
-    const documentId = docRow.id
+    documentId = docRow.id
 
     const buf = readFileSync(path.join(LAWS_DIR, fileName))
     const doc = await getDocument({ data: new Uint8Array(buf), useSystemFonts: true, isEvalSupported: false }).promise
@@ -306,6 +320,12 @@ async function main() {
       [title, totalPages, chunks.length, ocrPages, documentId]
     )
     log(`  DONE: ${chunks.length} chunks stored. Title: ${title.slice(0, 80)}`)
+    } catch (err) {
+      log(`  FAILED: ${String(err.message).slice(0, 120)}`)
+      if (documentId) {
+        try { await sql.query("UPDATE documents SET status = 'failed' WHERE id = $1", [documentId]) } catch {}
+      }
+    }
   }
 
   log('All files processed.')

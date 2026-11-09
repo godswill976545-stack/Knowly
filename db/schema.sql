@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS regulations (
   summary TEXT NOT NULL,
   category TEXT NOT NULL,
   severity TEXT NOT NULL DEFAULT 'info',
+  type TEXT NOT NULL DEFAULT 'news',
+  enforcement_note TEXT,
   country TEXT NOT NULL DEFAULT 'benin',
   source_name TEXT NOT NULL,
   source_url TEXT,
@@ -47,7 +49,19 @@ CREATE TABLE IF NOT EXISTS goals (
   category TEXT NOT NULL DEFAULT 'general',
   target_amount INTEGER NOT NULL,
   current_amount INTEGER NOT NULL DEFAULT 0,
+  emoji TEXT,
   deadline DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS daily_logs (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  log_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  income INTEGER DEFAULT 0,
+  expenses INTEGER DEFAULT 0,
+  savings INTEGER DEFAULT 0,
+  source TEXT DEFAULT 'manual',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -60,6 +74,25 @@ CREATE TABLE IF NOT EXISTS ai_conversations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS money_checkins (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL DEFAULT 'weekly',
+  currency TEXT NOT NULL DEFAULT 'FCFA',
+  income INTEGER NOT NULL DEFAULT 0,
+  needs INTEGER NOT NULL DEFAULT 0,
+  wants INTEGER NOT NULL DEFAULT 0,
+  debt INTEGER NOT NULL DEFAULT 0,
+  feeling TEXT,
+  savings_goal_pct INTEGER,
+  regret TEXT,
+  says JSONB NOT NULL DEFAULT '[]',
+  plan JSONB NOT NULL DEFAULT '{}',
+  outcome TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_regulations_country_status ON regulations (country, verification_status, published_date DESC);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_conversations_user ON ai_conversations (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_money_checkins_user ON money_checkins (user_id, created_at DESC);

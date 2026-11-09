@@ -16,19 +16,63 @@ function sanitizeText(raw) {
 }
 
 /**
- * Parses inline formatting like **bold text** into React elements.
+ * Parses inline **bold** formatting inside a plain text segment.
  */
-function renderInline(text) {
+function renderBold(text, prefix) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((part, i) => {
+  return parts.map((part, j) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
-        <strong key={i} className="font-semibold text-on-surface">
+        <strong key={`${prefix}-${j}`} className="font-semibold text-on-surface">
           {part.slice(2, -2)}
         </strong>
       )
     }
     return part
+  })
+}
+
+/**
+ * Only allows http(s) URLs into href/src attributes. Content comes from
+ * scraped government pages and AI output, so a crafted `javascript:` or
+ * `data:` URL must never become a clickable link.
+ */
+function safeUrl(url) {
+  if (!url || typeof url !== 'string') return null
+  try {
+    const u = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'https://moncheck.invalid')
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Parses inline formatting like **bold text** and [label](url) links
+ * into React elements. Links open in a new tab with safe rel attrs.
+ */
+function renderInline(text) {
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g)
+  return parts.map((part, i) => {
+    const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+    if (match) {
+      const href = safeUrl(match[2])
+      if (href) {
+        return (
+          <a
+            key={`link-${i}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+          >
+            {renderBold(match[1], `link-${i}`)}
+          </a>
+        )
+      }
+      return renderBold(match[1], `link-${i}`)
+    }
+    return renderBold(part, `t-${i}`)
   })
 }
 
@@ -50,7 +94,7 @@ export default function ArticleRenderer({ content, className = '' }) {
         <ul key={`list-${elements.length}`} className="my-4 space-y-2 rounded-xl bg-surface-container-low/60 p-4">
           {currentList.map((item, idx) => (
             <li key={idx} className="flex items-start gap-2.5 text-body-md leading-relaxed text-on-surface-variant">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-secondary" />
+              <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-secondary" />
               <span>{renderInline(item)}</span>
             </li>
           ))}
@@ -73,6 +117,37 @@ export default function ArticleRenderer({ content, className = '' }) {
 
     // Flush any pending list before handling block elements
     flushList()
+
+    // Markdown image (![alt](src)) with alt fallback + lazy loading
+    const imgMatch = rawLine.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+    if (imgMatch) {
+      const src = safeUrl(imgMatch[2])
+      if (src) {
+        elements.push(
+          <img
+            key={`img-${elements.length}`}
+            src={src}
+            alt={imgMatch[1] || 'Illustration'}
+            loading="lazy"
+            className="my-4 w-full rounded-2xl object-cover"
+          />
+        )
+      }
+      continue
+    }
+
+    // H1 is reserved for the page title — downgrade to H2 styling
+    if (rawLine.startsWith('# ')) {
+      elements.push(
+        <div key={`h2-${elements.length}`} className="mt-8 mb-3 border-b border-outline-variant/60 pb-2">
+          <h2 className="flex items-center gap-2 text-[20px] font-bold tracking-tight text-on-surface">
+            <span className="h-4 w-1 rounded-full bg-primary" />
+            {renderInline(rawLine.replace(/^#\s+/, ''))}
+          </h2>
+        </div>
+      )
+      continue
+    }
 
     // H2 Header
     if (rawLine.startsWith('## ')) {

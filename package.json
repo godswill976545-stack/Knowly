@@ -15,6 +15,7 @@
   "dependencies": {
     "@clerk/backend": "^3.17.0",
     "@clerk/clerk-react": "^5.61.9",
+    "@designcodeio/threeui": "^1.2.0",
     "@hono/node-server": "^2.1.1",
     "@napi-rs/canvas": "^1.0.8",
     "@neondatabase/serverless": "^1.1.0",
@@ -38,5 +39,8 @@
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.17",
     "vite": "^8.2.2"
+  },
+  "overrides": {
+    "shell-quote": "^1.10.1"
   }
 }

@@ -8,13 +8,23 @@ const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 const clerkAppearance = {
   variables: {
-    fontFamily: "'Inter', system-ui, sans-serif",
-    colorPrimary: '#131b2e',
+    fontFamily: "'Nunito Sans', system-ui, sans-serif",
+    colorPrimary: '#18803d',
     colorBackground: '#ffffff',
-    colorText: '#0b1c30',
+    colorText: '#2b2118',
     colorInputBackground: '#ffffff',
-    colorInputText: '#0b1c30',
-    borderRadius: '0.5rem',
+    colorInputText: '#2b2118',
+    borderRadius: '0.75rem',
+  },
+  elements: {
+    // UserButton popover — themed to match the app card look
+    userButtonPopoverCard: 'mc-clerk-pop',
+    userButtonPopoverMain: 'mc-clerk-main',
+    userButtonPopoverHeader: 'mc-clerk-head',
+    userButtonPopoverFooter: 'mc-clerk-foot',
+    avatarBox: 'mc-clerk-avatar',
+    userPreviewSecondaryIdentifier: 'mc-clerk-email',
+    badge: 'mc-clerk-hide',
   },
 }
 
@@ -33,6 +43,10 @@ function Root() {
     )
   }
   return <App />
+}
+
+if (!document.documentElement.lang) {
+  document.documentElement.lang = 'fr'
 }
 
 createRoot(document.getElementById('root')).render(
